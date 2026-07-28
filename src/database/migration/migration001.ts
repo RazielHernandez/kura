@@ -197,7 +197,7 @@ export const migration001: Migration = {
 
         updatedAt TEXT NOT NULL,
 
-        deletedAt TEXT,
+        deletedAt TEXT
     );
     
     CREATE TABLE IF NOT EXISTS list_items (

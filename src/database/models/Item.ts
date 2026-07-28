@@ -1,5 +1,6 @@
-export interface Item {
-    id: string;
+import { BaseEntity } from "./BaseEntity";
+
+export interface Item extends BaseEntity{
 
     collectionId: string;
 
@@ -8,10 +9,4 @@ export interface Item {
     description?: string;
 
     favorite: boolean;
-
-    createdAt: string;
-
-    updatedAt: string;
-
-    deletedAt?: string | null;
 }

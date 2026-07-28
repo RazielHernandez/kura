@@ -1,3 +1,5 @@
+import { BaseEntity } from "./BaseEntity";
+
 export type FieldType =
     | "TEXT"
     | "NUMBER"
@@ -11,8 +13,7 @@ export type FieldType =
     | "COLOR"
     | "RATING";
 
-export interface CollectionField {
-    id: string;
+export interface CollectionField extends BaseEntity{
 
     collectionId: string;
 
@@ -23,10 +24,4 @@ export interface CollectionField {
     required: boolean;
 
     sortOrder: number;
-
-    createdAt: string;
-
-    updatedAt: string;
-
-    deletedAt?: string | null;
 }

@@ -1,5 +1,6 @@
-export interface Collection {
-    id: string;
+import { BaseEntity } from "./BaseEntity";
+
+export interface Collection extends BaseEntity{
 
     name: string;
 
@@ -10,10 +11,4 @@ export interface Collection {
     description?: string;
 
     sortOrder: number;
-
-    createdAt: string;
-
-    updatedAt: string;
-
-    deletedAt?: string | null;
 }

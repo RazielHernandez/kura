@@ -1,13 +1,7 @@
-export interface ItemNote {
-    id: string;
+import { BaseEntity } from "./BaseEntity";
 
+export interface ItemNote extends BaseEntity{
     itemId: string;
 
     content: string;
-
-    createdAt: string;
-
-    updatedAt: string;
-
-    deletedAt?: string | null;
 }

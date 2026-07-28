@@ -1,6 +1,6 @@
-export interface ItemImage {
-    id: string;
+import { BaseEntity } from "./BaseEntity";
 
+export interface ItemImage extends BaseEntity{
     itemId: string;
 
     uri: string;
@@ -8,10 +8,4 @@ export interface ItemImage {
     thumbnailUri?: string;
 
     sortOrder: number;
-
-    createdAt: string;
-
-    updatedAt: string;
-
-    deletedAt?: string | null;
 }
