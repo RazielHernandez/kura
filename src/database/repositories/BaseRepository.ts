@@ -1,10 +1,9 @@
-import { SQLiteDatabase } from "expo-sqlite";
 import { BaseEntity } from "../models/BaseEntity";
-import { now } from "../utils/DateUtils";
 import { databaseService } from "../DatabaseService";
+import { now } from "../utils/DateUtils";
+import * as SQLite from "expo-sqlite";
 
 export abstract class BaseRepository<T extends BaseEntity> {
-    
   protected readonly db = databaseService.connection;
   protected readonly tableName: string;
 
@@ -12,8 +11,29 @@ export abstract class BaseRepository<T extends BaseEntity> {
     this.tableName = tableName;
   }
 
+  protected async execute(
+    sql: string,
+    params: SQLite.SQLiteBindParams = []
+  ) {
+    return databaseService.execute(sql, params);
+  }
+
+  protected async query<R>(
+    sql: string,
+    params: SQLite.SQLiteBindParams = []
+  ): Promise<R[]> {
+    return databaseService.query<R>(sql, params);
+  }
+
+  protected async queryFirst<R>(
+    sql: string,
+    params: SQLite.SQLiteBindParams = []
+  ): Promise<R | null> {
+    return databaseService.queryFirst<R>(sql, params);
+  }
+
   async getById(id: string): Promise<T | null> {
-    const row = await this.db.getFirstAsync<T>(
+    return this.queryFirst<T>(
       `
       SELECT *
       FROM ${this.tableName}
@@ -22,12 +42,10 @@ export abstract class BaseRepository<T extends BaseEntity> {
       `,
       [id]
     );
-
-    return row ?? null;
   }
 
   async getAll(): Promise<T[]> {
-    return await this.db.getAllAsync<T>(
+    return this.query<T>(
       `
       SELECT *
       FROM ${this.tableName}
@@ -38,7 +56,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
   }
 
   async exists(id: string): Promise<boolean> {
-    const row = await this.db.getFirstAsync<{ count: number }>(
+    const result = await this.queryFirst<{ count: number }>(
       `
       SELECT COUNT(*) as count
       FROM ${this.tableName}
@@ -48,11 +66,13 @@ export abstract class BaseRepository<T extends BaseEntity> {
       [id]
     );
 
-    return (row?.count ?? 0) > 0;
+    return (result?.count ?? 0) > 0;
   }
 
   async softDelete(id: string): Promise<void> {
-    await this.db.runAsync(
+    const timestamp = now();
+
+    await this.execute(
       `
       UPDATE ${this.tableName}
       SET
@@ -60,12 +80,12 @@ export abstract class BaseRepository<T extends BaseEntity> {
         updatedAt = ?
       WHERE id = ?
       `,
-      [now(), now(), id]
+      [timestamp, timestamp, id]
     );
   }
 
   async restore(id: string): Promise<void> {
-    await this.db.runAsync(
+    await this.execute(
       `
       UPDATE ${this.tableName}
       SET
@@ -78,7 +98,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
   }
 
   async hardDelete(id: string): Promise<void> {
-    await this.db.runAsync(
+    await this.execute(
       `
       DELETE FROM ${this.tableName}
       WHERE id = ?
@@ -88,7 +108,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
   }
 
   async count(): Promise<number> {
-    const row = await this.db.getFirstAsync<{ count: number }>(
+    const result = await this.queryFirst<{ count: number }>(
       `
       SELECT COUNT(*) as count
       FROM ${this.tableName}
@@ -96,20 +116,6 @@ export abstract class BaseRepository<T extends BaseEntity> {
       `
     );
 
-    return row?.count ?? 0;
-  }
-
-  protected async execute(
-    sql: string,
-    params: any[] = []
-    ) {
-    return this.db.runAsync(sql, params);
-  }
-
-  protected async query<R>(
-    sql: string,
-    params: any[] = []
-    ): Promise<R[]> {
-    return this.db.getAllAsync<R>(sql, params);
+    return result?.count ?? 0;
   }
 }
