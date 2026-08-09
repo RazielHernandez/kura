@@ -3,11 +3,18 @@ import { databaseService } from "../DatabaseService";
 import { now } from "../utils/DateUtils";
 import * as SQLite from "expo-sqlite";
 
-export abstract class BaseRepository<T extends BaseEntity> {
+export abstract class BaseRepository<
+  T extends BaseEntity,
+  R = T
+> {
   protected readonly db = databaseService.connection;
   protected readonly tableName: string;
 
-  constructor(tableName: string) {
+  constructor(
+    tableName: string,
+    protected readonly mapRow: (row: R) => T = (row) =>
+      row as unknown as T
+  ) {
     this.tableName = tableName;
   }
 
@@ -18,22 +25,40 @@ export abstract class BaseRepository<T extends BaseEntity> {
     return databaseService.execute(sql, params);
   }
 
-  protected async query<R>(
+  protected async query(
     sql: string,
     params: SQLite.SQLiteBindParams = []
-  ): Promise<R[]> {
-    return databaseService.query<R>(sql, params);
+  ): Promise<T[]> {
+    const rows = await databaseService.query<R>(sql, params);
+
+    return rows.map(this.mapRow);
   }
 
-  protected async queryFirst<R>(
+  protected async queryFirst(
     sql: string,
     params: SQLite.SQLiteBindParams = []
-  ): Promise<R | null> {
-    return databaseService.queryFirst<R>(sql, params);
+  ): Promise<T | null> {
+    const row = await databaseService.queryFirst<R>(sql, params);
+
+    return row ? this.mapRow(row) : null;
+  }
+
+  protected async queryRaw<Q>(
+    sql: string,
+    params: SQLite.SQLiteBindParams = []
+  ): Promise<Q[]> {
+    return databaseService.query<Q>(sql, params);
+  }
+
+  protected async queryFirstRaw<Q>(
+    sql: string,
+    params: SQLite.SQLiteBindParams = []
+  ): Promise<Q | null> {
+    return databaseService.queryFirst<Q>(sql, params);
   }
 
   async getById(id: string): Promise<T | null> {
-    return this.queryFirst<T>(
+    return this.queryFirst(
       `
       SELECT *
       FROM ${this.tableName}
@@ -45,7 +70,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
   }
 
   async getAll(): Promise<T[]> {
-    return this.query<T>(
+    return this.query(
       `
       SELECT *
       FROM ${this.tableName}
@@ -56,7 +81,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
   }
 
   async exists(id: string): Promise<boolean> {
-    const result = await this.queryFirst<{ count: number }>(
+    const result = await this.queryFirstRaw<{ count: number }>(
       `
       SELECT COUNT(*) as count
       FROM ${this.tableName}
@@ -108,7 +133,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
   }
 
   async count(): Promise<number> {
-    const result = await this.queryFirst<{ count: number }>(
+    const result = await this.queryFirstRaw<{ count: number }>(
       `
       SELECT COUNT(*) as count
       FROM ${this.tableName}

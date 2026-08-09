@@ -113,7 +113,7 @@ export class CollectionRepository extends BaseRepository<Collection> {
   }
 
   async search(query: string): Promise<Collection[]> {
-    return this.query<Collection>(
+    return this.query(
       `
       SELECT *
       FROM collections
@@ -129,7 +129,7 @@ export class CollectionRepository extends BaseRepository<Collection> {
   }
 
   async existsByName(name: string): Promise<boolean> {
-    const result = await this.queryFirst<{ count: number }>(
+    const result = await this.queryFirstRaw<{ count: number }>(
       `
       SELECT COUNT(*) as count
       FROM collections
@@ -143,7 +143,7 @@ export class CollectionRepository extends BaseRepository<Collection> {
   }
 
   async getAllOrdered(): Promise<Collection[]> {
-    return this.query<Collection>(
+    return this.query(
       `
       SELECT *
       FROM collections
