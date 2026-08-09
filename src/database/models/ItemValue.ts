@@ -6,5 +6,5 @@ export interface ItemValue extends BaseEntity{
 
     fieldId: string;
 
-    value?: string;
+    value: string | null;
 }

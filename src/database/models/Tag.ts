@@ -6,5 +6,5 @@ export interface Tag extends BaseEntity{
 
     name: string;
 
-    color?: string;
+    color: string | null;
 }

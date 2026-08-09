@@ -5,7 +5,7 @@ export interface ItemImage extends BaseEntity{
 
     uri: string;
 
-    thumbnailUri?: string;
+    thumbnailUri: string | null;
 
     sortOrder: number;
 }

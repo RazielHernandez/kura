@@ -99,7 +99,9 @@ export const migration001: Migration = {
 
         FOREIGN KEY(fieldId)
             REFERENCES collection_fields(id)
-            ON DELETE CASCADE
+            ON DELETE CASCADE,
+
+        UNIQUE(itemId, fieldId)
 
     );
     
@@ -145,7 +147,9 @@ export const migration001: Migration = {
 
         FOREIGN KEY(collectionId)
             REFERENCES collections(id)
-            ON DELETE CASCADE
+            ON DELETE CASCADE,
+
+        UNIQUE(collectionId, name)
 
     );
     
@@ -190,14 +194,21 @@ export const migration001: Migration = {
     CREATE TABLE IF NOT EXISTS custom_lists (
 
         id TEXT PRIMARY KEY NOT NULL,
+
         name TEXT NOT NULL,
+
         icon TEXT,
+
         color TEXT,
+
         createdAt TEXT NOT NULL,
 
         updatedAt TEXT NOT NULL,
 
-        deletedAt TEXT
+        deletedAt TEXT,
+
+        UNIQUE(name)
+
     );
     
     CREATE TABLE IF NOT EXISTS list_items (

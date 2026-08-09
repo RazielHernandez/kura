@@ -15,7 +15,7 @@ export interface ItemHistory {
 
     type: ItemHistoryType;
 
-    description?: string;
+    description: string | null;
 
     createdAt: string;
 }

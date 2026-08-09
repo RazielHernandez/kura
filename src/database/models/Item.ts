@@ -6,7 +6,7 @@ export interface Item extends BaseEntity{
 
     name: string;
 
-    description?: string;
-
+    description: string | null;
+    
     favorite: boolean;
 }

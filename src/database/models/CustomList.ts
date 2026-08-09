@@ -4,7 +4,7 @@ export interface CustomList extends BaseEntity{
 
     name: string;
 
-    icon?: string;
+    icon: string | null;
 
-    color?: string;
+    color: string | null;
 }
