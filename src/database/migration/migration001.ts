@@ -267,5 +267,15 @@ export const migration001: Migration = {
     ON item_history(itemId);
 
     CREATE INDEX IF NOT EXISTS idx_tags_collection
-    ON tags(collectionId);`
+    ON tags(collectionId);
+
+    CREATE INDEX IF NOT EXISTS idx_item_tags_tag
+    ON item_tags(tagId);
+
+    CREATE INDEX IF NOT EXISTS idx_list_items_item
+    ON list_items(itemId);
+    
+    CREATE UNIQUE INDEX idx_collection_fields_collection_name
+    ON collection_fields(collectionId, name)
+    WHERE deletedAt IS NULL;`
 }

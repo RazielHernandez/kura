@@ -13,6 +13,7 @@ export default function App() {
       try {
         await databaseService.initialize();
         setDatabaseReady(true);
+        
       } catch (error) {
         console.error("Database initialization failed:", error);
       }
