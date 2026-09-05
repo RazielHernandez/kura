@@ -113,6 +113,22 @@ export class CustomListRepository extends BaseRepository<CustomList> {
     );
   }
 
+  async existsIncludingDeleted(
+    id: string
+  ): Promise<boolean> {
+    const result =
+      await this.queryFirstRaw<{ count: number }>(
+        `
+        SELECT COUNT(*) as count
+        FROM custom_lists
+        WHERE id = ?
+        `,
+        [id]
+      );
+
+    return (result?.count ?? 0) > 0;
+  }
+
   async existsByName(
     name: string
   ): Promise<boolean> {

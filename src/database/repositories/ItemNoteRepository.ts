@@ -119,6 +119,21 @@ export class ItemNoteRepository extends BaseRepository<ItemNote> {
     );
   }
 
+  async existsIncludingDeleted(
+    id: string
+  ): Promise<boolean> {
+    const result = await this.queryFirstRaw<{ count: number }>(
+      `
+      SELECT COUNT(*) as count
+      FROM item_notes
+      WHERE id = ?
+      `,
+      [id]
+    );
+
+    return (result?.count ?? 0) > 0;
+  }
+
   async deleteByItemId(
     itemId: string
   ): Promise<void> {
