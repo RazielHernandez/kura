@@ -167,6 +167,21 @@ export class ItemRepository extends BaseRepository<Item> {
     );
   }
 
+  async existsIncludingDeleted(
+    id: string
+  ): Promise<boolean> {
+    const result = await this.queryFirstRaw<{ count: number }>(
+      `
+      SELECT COUNT(*) as count
+      FROM items
+      WHERE id = ?
+      `,
+      [id]
+    );
+
+    return (result?.count ?? 0) > 0;
+  }
+
   async existsByName(
     collectionId: string,
     name: string

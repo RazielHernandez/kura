@@ -130,6 +130,37 @@ export class TagRepository extends BaseRepository<Tag> {
     );
   }
 
+  async getByNameIncludingDeleted(
+    collectionId: string,
+    name: string
+  ): Promise<Tag | null> {
+    return this.queryFirst(
+      `
+      SELECT *
+      FROM tags
+      WHERE collectionId = ?
+        AND name = ?
+      LIMIT 1
+      `,
+      [collectionId, name]
+    );
+  }
+
+  async existsIncludingDeleted(
+    id: string
+  ): Promise<boolean> {
+    const result = await this.queryFirstRaw<{ count: number }>(
+      `
+      SELECT COUNT(*) as count
+      FROM tags
+      WHERE id = ?
+      `,
+      [id]
+    );
+
+    return (result?.count ?? 0) > 0;
+  }
+
   async getByName(
     collectionId: string,
     name: string

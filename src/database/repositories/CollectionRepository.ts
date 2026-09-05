@@ -142,6 +142,19 @@ export class CollectionRepository extends BaseRepository<Collection> {
     return (result?.count ?? 0) > 0;
   }
 
+  async existsIncludingDeleted(id: string): Promise<boolean> {
+    const result = await this.queryFirstRaw<{ count: number }>(
+      `
+      SELECT COUNT(*) as count
+      FROM collections
+      WHERE id = ?
+      `,
+      [id]
+    );
+
+    return (result?.count ?? 0) > 0;
+  }
+
   async getAllOrdered(): Promise<Collection[]> {
     return this.query(
       `

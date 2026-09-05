@@ -162,6 +162,21 @@ export class CollectionFieldRepository
     );
   }
 
+  async existsIncludingDeleted(
+    id: string
+  ): Promise<boolean> {
+    const result = await this.queryFirstRaw<{ count: number }>(
+      `
+      SELECT COUNT(*) as count
+      FROM collection_fields
+      WHERE id = ?
+      `,
+      [id]
+    );
+
+    return (result?.count ?? 0) > 0;
+  }
+
   async existsByName(
     collectionId: string,
     name: string

@@ -88,6 +88,22 @@ export class ItemValueRepository extends BaseRepository<ItemValue> {
     return updatedItemValue;
   }
 
+  async getByItemAndFieldIncludingDeleted(
+    itemId: string,
+    fieldId: string
+  ): Promise<ItemValue | null> {
+    return this.queryFirst(
+      `
+      SELECT *
+      FROM item_values
+      WHERE itemId = ?
+        AND fieldId = ?
+      LIMIT 1
+      `,
+      [itemId, fieldId]
+    );
+  }
+
   async getByItemId(
     itemId: string
   ): Promise<ItemValue[]> {
@@ -158,24 +174,37 @@ export class ItemValueRepository extends BaseRepository<ItemValue> {
     fieldId: string,
     value: string | null
   ): Promise<ItemValue> {
-    const existing = await this.getByItemAndField(
-      itemId,
-      fieldId
-    );
-
-    if (existing) {
-      const updated = await this.update(
-        existing.id,
-        value
+    const existing =
+      await this.getByItemAndFieldIncludingDeleted(
+        itemId,
+        fieldId
       );
 
-      if (!updated) {
-        throw new Error(
-          `Failed to update item value: ${existing.id}`
-        );
-      }
+    if (existing) {
+      const updatedAt = now();
 
-      return updated;
+      await this.execute(
+        `
+        UPDATE item_values
+        SET
+          value = ?,
+          updatedAt = ?,
+          deletedAt = NULL
+        WHERE id = ?
+        `,
+        [
+          value,
+          updatedAt,
+          existing.id,
+        ]
+      );
+
+      return {
+        ...existing,
+        value,
+        updatedAt,
+        deletedAt: null,
+      };
     }
 
     return this.create(
