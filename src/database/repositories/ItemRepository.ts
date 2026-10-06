@@ -18,6 +18,20 @@ export class ItemRepository extends BaseRepository<Item> {
     };
   }
 
+  async getByIdIncludingDeleted(
+    id: string
+  ): Promise<Item | null> {
+    return this.queryFirst(
+      `
+      SELECT *
+      FROM items
+      WHERE id = ?
+      LIMIT 1
+      `,
+      [id]
+    );
+  }
+
   async create(
     collectionId: string,
     name: string,

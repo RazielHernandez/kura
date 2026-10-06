@@ -1,12 +1,13 @@
 export type ItemHistoryType =
-    | "CREATED"
-    | "UPDATED"
-    | "PURCHASED"
-    | "SOLD"
-    | "LENT"
-    | "BORROWED"
-    | "RESTORED"
-    | "CUSTOM";
+  | "CREATED"
+  | "UPDATED"
+  | "PURCHASED"
+  | "SOLD"
+  | "LENT"
+  | "BORROWED"
+  | "RESTORED"
+  | "DELETED"
+  | "CUSTOM";
 
 export interface ItemHistory {
     id: string;

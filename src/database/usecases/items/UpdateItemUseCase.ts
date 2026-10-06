@@ -70,5 +70,4 @@ export class UpdateItemUseCase {
   }
 }
 
-export const updateItemUseCase =
-  new UpdateItemUseCase();
+export const updateItemUseCase = new UpdateItemUseCase();
