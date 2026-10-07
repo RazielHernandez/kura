@@ -1,11 +1,25 @@
 import { BaseRepository } from "./BaseRepository";
-import { Collection } from "../models/collection";
+import { Collection } from "../models/Collection";
 import { generateId } from "../utils/UUID";
 import { now } from "../utils/DateUtils";
 
 export class CollectionRepository extends BaseRepository<Collection> {
   constructor() {
     super("collections");
+  }
+
+  async getByIdIncludingDeleted(
+    id: string
+  ): Promise<Collection | null> {
+    return this.queryFirst(
+      `
+      SELECT *
+      FROM collections
+      WHERE id = ?
+      LIMIT 1
+      `,
+      [id]
+    );
   }
 
   async create(
