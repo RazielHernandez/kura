@@ -244,6 +244,39 @@ export const migration001: Migration = {
         value TEXT
 
     );
+
+    CREATE TABLE IF NOT EXISTS collection_deletions (
+        id TEXT PRIMARY KEY NOT NULL,
+
+        collectionId TEXT NOT NULL,
+
+        deletedAt TEXT NOT NULL,
+
+        restoredAt TEXT,
+
+        collectionFieldIds TEXT NOT NULL,
+
+        itemIds TEXT NOT NULL,
+
+        itemValueIds TEXT NOT NULL,
+
+        itemImageIds TEXT NOT NULL,
+
+        itemNoteIds TEXT NOT NULL,
+
+        tagIds TEXT NOT NULL,
+
+        FOREIGN KEY(collectionId)
+            REFERENCES collections(id)
+            ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_collection_deletions_collection
+    ON collection_deletions(collectionId);
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_collection_deletions_active
+    ON collection_deletions(collectionId)
+    WHERE restoredAt IS NULL;
     
     CREATE INDEX IF NOT EXISTS idx_items_collection
     ON items(collectionId);
