@@ -309,6 +309,6 @@ export const migration001: Migration = {
     ON list_items(itemId);
     
     CREATE UNIQUE INDEX idx_collection_fields_collection_name
-    ON collection_fields(collectionId, name)
+    ON collection_fields(collectionId, LOWER(TRIM(name)))
     WHERE deletedAt IS NULL;`
 }

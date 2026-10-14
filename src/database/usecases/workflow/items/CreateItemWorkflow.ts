@@ -10,6 +10,7 @@ import { itemValueRepository } from "../../../repositories/ItemValueRepository";
 import { createItemUseCase } from "../../items/CreateItemUseCase";
 import { validateItemFieldsUseCase } from "../../items/ValidateItemFieldsUseCase";
 import { validateItemTagsUseCase } from "../../items/ValidateItemTagsUseCase";
+import { validateRequiredItemFieldsUseCase } from "../../items/ValidateRequiredItemFieldsUseCase";
 
 export interface CreateItemWorkflowInput {
   collectionId: string;
@@ -43,14 +44,18 @@ export class CreateItemWorkflow {
      * Every field must exist and belong
      * to the item collection.
      */
-    if (input.values?.length) {
-      await validateItemFieldsUseCase.execute({
-        collectionId: input.collectionId,
-        fieldIds: input.values.map(
-          value => value.fieldId
-        ),
-      });
-    }
+    
+    const values = input.values ?? [];
+
+    await validateItemFieldsUseCase.execute({
+      collectionId: input.collectionId,
+      fieldIds: values.map(value => value.fieldId),
+    });
+
+    await validateRequiredItemFieldsUseCase.execute({
+      collectionId: input.collectionId,
+      values,
+    });
 
     /*
      * Validate tags.

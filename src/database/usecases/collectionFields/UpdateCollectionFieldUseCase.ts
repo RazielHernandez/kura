@@ -1,13 +1,12 @@
-import {
-  CollectionField,
-  FieldType,
-} from "../../models/CollectionField";
+
+import { CollectionField } from "../../models/CollectionField";
 import { collectionFieldRepository } from "../../repositories/CollectionFieldRepository";
+import { validateCollectionFieldsUseCase } from "./ValidateCollectionFieldsUseCase";
 
 export interface UpdateCollectionFieldInput {
   id: string;
   name?: string;
-  fieldType?: FieldType;
+  fieldType?: CollectionField["fieldType"];
   required?: boolean;
   sortOrder?: number;
 }
@@ -16,61 +15,50 @@ export class UpdateCollectionFieldUseCase {
   async execute(
     input: UpdateCollectionFieldInput
   ): Promise<CollectionField> {
-    const id = input.id.trim();
-
-    if (!id) {
-      throw new Error("Field ID is required");
-    }
-
-    const existing =
-      await collectionFieldRepository.getById(id);
+    const existing = await collectionFieldRepository.getById(input.id);
 
     if (!existing) {
-      throw new Error("Field not found");
+      throw new Error("Collection field not found");
     }
 
-    let name = existing.name;
+    const name = input.name ?? existing.name;
+    const fieldType = input.fieldType ?? existing.fieldType;
+
+    validateCollectionFieldsUseCase.execute([
+      {
+        name,
+        fieldType,
+        required: input.required ?? existing.required,
+      },
+    ]);
 
     if (input.name !== undefined) {
-      name = input.name.trim();
-
-      if (!name) {
-        throw new Error("Field name is required");
-      }
-
-      if (name !== existing.name) {
-        const exists =
-          await collectionFieldRepository.existsByName(
-            existing.collectionId,
-            name
-          );
-
-        if (exists) {
-          throw new Error(
-            `A field with the name "${name}" already exists in this collection`
-          );
-        }
-      }
-    }
-
-    const updated =
-      await collectionFieldRepository.update(
-        id,
-        {
-          name,
-          fieldType: input.fieldType,
-          required: input.required,
-          sortOrder: input.sortOrder,
-        }
+      const duplicate = await collectionFieldRepository.existsByName(
+        existing.collectionId,
+        name,
+        existing.id
       );
 
-    if (!updated) {
-      throw new Error("Field could not be updated");
+      if (duplicate) {
+        throw new Error(
+          `A field with the name "${name.trim()}" already exists in this collection`
+        );
+      }
     }
 
-    return updated;
+    const updatedField = await collectionFieldRepository.update(input.id, {
+      name: input.name?.trim(),
+      fieldType: input.fieldType,
+      required: input.required,
+      sortOrder: input.sortOrder,
+    });
+
+    if (!updatedField) {
+      throw new Error("Failed to update collection field");
+    }
+
+    return updatedField;
   }
 }
 
-export const updateCollectionFieldUseCase =
-  new UpdateCollectionFieldUseCase();
+export const updateCollectionFieldUseCase = new UpdateCollectionFieldUseCase();

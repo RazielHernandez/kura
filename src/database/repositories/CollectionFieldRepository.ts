@@ -179,17 +179,19 @@ export class CollectionFieldRepository
 
   async existsByName(
     collectionId: string,
-    name: string
+    name: string,
+    excludeFieldId?: string
   ): Promise<boolean> {
     const result = await this.queryFirstRaw<{ count: number }>(
       `
       SELECT COUNT(*) as count
       FROM collection_fields
       WHERE collectionId = ?
-        AND name = ?
+        AND LOWER(TRIM(name)) = LOWER(TRIM(?))
         AND deletedAt IS NULL
+        AND (? IS NULL OR id != ?)
       `,
-      [collectionId, name]
+      [collectionId, name, excludeFieldId ?? null, excludeFieldId ?? null]
     );
 
     return (result?.count ?? 0) > 0;
@@ -245,5 +247,4 @@ export class CollectionFieldRepository
   }
 }
 
-export const collectionFieldRepository =
-  new CollectionFieldRepository();
+export const collectionFieldRepository = new CollectionFieldRepository();

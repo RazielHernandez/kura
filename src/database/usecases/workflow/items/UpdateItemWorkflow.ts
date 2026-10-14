@@ -1,3 +1,4 @@
+
 import { Item } from "../../../models/Item";
 import { databaseService } from "../../../DatabaseService";
 
@@ -11,6 +12,7 @@ import { itemValueRepository } from "../../../repositories/ItemValueRepository";
 import { updateItemUseCase } from "../../items/UpdateItemUseCase";
 import { validateItemFieldsUseCase } from "../../items/ValidateItemFieldsUseCase";
 import { validateItemTagsUseCase } from "../../items/ValidateItemTagsUseCase";
+import { validateRequiredItemFieldsUseCase } from "../../items/ValidateRequiredItemFieldsUseCase";
 
 export interface UpdateItemWorkflowInput {
   itemId: string;
@@ -38,36 +40,70 @@ export class UpdateItemWorkflow {
   async execute(
     input: UpdateItemWorkflowInput
   ): Promise<Item> {
-
     /*
      * Get the existing item.
-     *
-     * We need its collectionId to validate
-     * fields and tags.
      */
     const existing =
-      await itemRepository.getById(
-        input.itemId
-      );
+      await itemRepository.getById(input.itemId);
 
     if (!existing) {
       throw new Error("Item not found");
     }
 
     /*
-     * Validate fields.
+     * Load existing values and merge supplied changes.
      *
-     * Every supplied field must belong
-     * to the item's collection.
+     * Values not included in input.values remain unchanged.
+     * A supplied null or empty string replaces the old value.
      */
-    if (input.values?.length) {
-      await validateItemFieldsUseCase.execute({
-        collectionId: existing.collectionId,
-        fieldIds: input.values.map(
-          value => value.fieldId
-        ),
-      });
+    const currentValues =
+      await itemValueRepository.getByItemId(input.itemId);
+
+    const valuesByFieldId = new Map<
+      string,
+      string | null
+    >(
+      currentValues.map(value => [
+        value.fieldId,
+        value.value,
+      ])
+    );
+
+    for (const value of input.values ?? []) {
+      valuesByFieldId.set(
+        value.fieldId,
+        value.value
+      );
     }
+
+    const finalValues = Array.from(
+      valuesByFieldId,
+      ([fieldId, value]) => ({
+        fieldId,
+        value,
+      })
+    );
+
+    /*
+     * Validate field ownership.
+     *
+     * Validate all fields in the final state, including
+     * existing values that are not being changed.
+     */
+    await validateItemFieldsUseCase.execute({
+      collectionId: existing.collectionId,
+      fieldIds: finalValues.map(
+        value => value.fieldId
+      ),
+    });
+
+    /*
+     * Validate required fields against the final state.
+     */
+    await validateRequiredItemFieldsUseCase.execute({
+      collectionId: existing.collectionId,
+      values: finalValues,
+    });
 
     /*
      * Validate tags.
@@ -84,11 +120,9 @@ export class UpdateItemWorkflow {
     }
 
     /*
-     * Start transaction only after all
-     * relationship validation succeeds.
+     * Start transaction after validation succeeds.
      */
     return databaseService.transaction(async () => {
-
       /*
        * Update basic item information.
        */
@@ -101,7 +135,7 @@ export class UpdateItemWorkflow {
         });
 
       /*
-       * Values
+       * Update supplied values only.
        */
       if (input.values?.length) {
         for (const value of input.values) {
@@ -114,11 +148,7 @@ export class UpdateItemWorkflow {
       }
 
       /*
-       * Tags
-       *
-       * undefined = don't change
-       * []        = remove all
-       * [...]     = replace
+       * Update tags when provided.
        */
       if (input.tagIds !== undefined) {
         await itemTagRepository.setTagsForItem(
@@ -128,7 +158,7 @@ export class UpdateItemWorkflow {
       }
 
       /*
-       * Add notes
+       * Add notes.
        */
       if (input.notesToAdd?.length) {
         for (const content of input.notesToAdd) {
@@ -146,7 +176,7 @@ export class UpdateItemWorkflow {
       }
 
       /*
-       * Add images
+       * Add images.
        */
       if (input.imagesToAdd?.length) {
         for (const image of input.imagesToAdd) {
@@ -162,7 +192,7 @@ export class UpdateItemWorkflow {
       }
 
       /*
-       * History
+       * Record history.
        */
       await itemHistoryRepository.create(
         item.id,
@@ -175,4 +205,5 @@ export class UpdateItemWorkflow {
   }
 }
 
-export const updateItemWorkflow = new UpdateItemWorkflow();
+export const updateItemWorkflow =
+  new UpdateItemWorkflow();

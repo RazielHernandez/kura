@@ -1,5 +1,7 @@
+
 import { Collection } from "../../../models/Collection";
 import { updateCollectionUseCase } from "../../collections/UpdateCollectionUseCase";
+import { validateCollectionUseCase } from "../../collections/ValidateCollectionUseCase";
 
 export interface UpdateCollectionWorkflowInput {
   collectionId: string;
@@ -13,12 +15,16 @@ export class UpdateCollectionWorkflow {
   async execute(
     input: UpdateCollectionWorkflowInput
   ): Promise<Collection> {
-    return updateCollectionUseCase.execute({
-      id: input.collectionId,
+    const validated = validateCollectionUseCase.execute({
       name: input.name,
       icon: input.icon,
       color: input.color,
       description: input.description,
+    });
+
+    return updateCollectionUseCase.execute({
+      id: input.collectionId,
+      ...validated,
     });
   }
 }
