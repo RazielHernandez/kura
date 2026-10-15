@@ -1,20 +1,23 @@
+
 import { itemNoteRepository } from "../../repositories/ItemNoteRepository";
 
 export class RestoreItemNoteUseCase {
-  async execute(
-    noteId: string
-  ): Promise<void> {
+  async execute(noteId: string): Promise<void> {
     const id = noteId.trim();
 
     if (!id) {
       throw new Error("Note ID is required");
     }
 
-    const exists =
-      await itemNoteRepository.existsIncludingDeleted(id);
+    const note =
+      await itemNoteRepository.getByIdIncludingDeleted(id);
 
-    if (!exists) {
+    if (!note) {
       throw new Error(`Note not found: ${id}`);
+    }
+
+    if (!note.deletedAt) {
+      throw new Error(`Note is not deleted: ${id}`);
     }
 
     await itemNoteRepository.restore(id);

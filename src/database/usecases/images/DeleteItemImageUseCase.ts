@@ -20,5 +20,4 @@ export class DeleteItemImageUseCase {
   }
 }
 
-export const deleteItemImageUseCase =
-  new DeleteItemImageUseCase();
+export const deleteItemImageUseCase = new DeleteItemImageUseCase();

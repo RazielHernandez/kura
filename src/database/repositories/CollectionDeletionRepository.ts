@@ -31,26 +31,27 @@ interface CollectionDeletionRow {
 
 export class CollectionDeletionRepository {
   async create(input: {
-    collectionId: string;
-    collectionFieldIds: string[];
-    itemIds: string[];
-    itemValueIds: string[];
-    itemImageIds: string[];
-    itemNoteIds: string[];
-    tagIds: string[];
-  }): Promise<CollectionDeletion> {
-    const deletion: CollectionDeletion = {
-      id: generateId(),
-      collectionId: input.collectionId,
-      deletedAt: now(),
-      restoredAt: null,
-      collectionFieldIds: input.collectionFieldIds,
-      itemIds: input.itemIds,
-      itemValueIds: input.itemValueIds,
-      itemImageIds: input.itemImageIds,
-      itemNoteIds: input.itemNoteIds,
-      tagIds: input.tagIds,
-    };
+  collectionId: string;
+  deletedAt: string;
+  collectionFieldIds: string[];
+  itemIds: string[];
+  itemValueIds: string[];
+  itemImageIds: string[];
+  itemNoteIds: string[];
+  tagIds: string[];
+}): Promise<CollectionDeletion> {
+  const deletion: CollectionDeletion = {
+    id: generateId(),
+    collectionId: input.collectionId,
+    deletedAt: input.deletedAt,
+    restoredAt: null,
+    collectionFieldIds: input.collectionFieldIds,
+    itemIds: input.itemIds,
+    itemValueIds: input.itemValueIds,
+    itemImageIds: input.itemImageIds,
+    itemNoteIds: input.itemNoteIds,
+    tagIds: input.tagIds,
+  };
 
     await databaseService.execute(
       `

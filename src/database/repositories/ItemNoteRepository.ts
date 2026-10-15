@@ -65,7 +65,7 @@ export class ItemNoteRepository extends BaseRepository<ItemNote> {
       updatedAt: now(),
     };
 
-    await this.execute(
+    const result = await this.execute(
       `
       UPDATE item_notes
       SET
@@ -80,6 +80,10 @@ export class ItemNoteRepository extends BaseRepository<ItemNote> {
         id,
       ]
     );
+
+    if (result.changes !== 1) {
+      return null;
+    }
 
     return updatedNote;
   }
@@ -103,6 +107,13 @@ export class ItemNoteRepository extends BaseRepository<ItemNote> {
     itemId: string,
     query: string
   ): Promise<ItemNote[]> {
+    const normalizedItemId = itemId.trim();
+    const normalizedQuery = query.trim();
+
+    if (!normalizedItemId || !normalizedQuery) {
+      return [];
+    }
+
     return this.query(
       `
       SELECT *
@@ -112,26 +123,8 @@ export class ItemNoteRepository extends BaseRepository<ItemNote> {
         AND content LIKE ?
       ORDER BY updatedAt DESC
       `,
-      [
-        itemId,
-        `%${query}%`,
-      ]
+      [normalizedItemId, `%${normalizedQuery}%`]
     );
-  }
-
-  async existsIncludingDeleted(
-    id: string
-  ): Promise<boolean> {
-    const result = await this.queryFirstRaw<{ count: number }>(
-      `
-      SELECT COUNT(*) as count
-      FROM item_notes
-      WHERE id = ?
-      `,
-      [id]
-    );
-
-    return (result?.count ?? 0) > 0;
   }
 
   async deleteByItemId(

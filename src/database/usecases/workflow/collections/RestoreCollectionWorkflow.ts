@@ -5,7 +5,8 @@ import { collectionDeletionRepository } from "../../../repositories/CollectionDe
 async function restoreIds(
   table: string,
   ids: string[],
-  timestamp: string
+  timestamp: string,
+  deletionTimestamp: string
 ): Promise<void> {
   if (ids.length === 0) return;
 
@@ -16,28 +17,30 @@ async function restoreIds(
     UPDATE ${table}
     SET deletedAt = NULL, updatedAt = ?
     WHERE id IN (${placeholders})
-      AND deletedAt IS NOT NULL
+      AND deletedAt = ?
     `,
-    [timestamp, ...ids]
+    [timestamp, ...ids, deletionTimestamp]
   );
 }
 
 export class RestoreCollectionWorkflow {
   async execute(collectionId: string): Promise<void> {
-    const collection =
-      await collectionRepository.getByIdIncludingDeleted(
-        collectionId
-      );
-
-    if (!collection) {
-      throw new Error("Collection not found");
-    }
-
-    if (!collection.deletedAt) {
-      throw new Error("Collection is not deleted");
-    }
-
     await databaseService.transaction(async () => {
+      // Recheck the collection inside the transaction.
+      const currentCollection =
+        await collectionRepository.getByIdIncludingDeleted(
+          collectionId
+        );
+
+      if (!currentCollection) {
+        throw new Error("Collection not found");
+      }
+
+      if (!currentCollection.deletedAt) {
+        throw new Error("Collection is not deleted");
+      }
+
+      // Retrieve the deletion snapshot.
       const deletion =
         await collectionDeletionRepository
           .getActiveByCollectionId(collectionId);
@@ -52,50 +55,62 @@ export class RestoreCollectionWorkflow {
 
       // Restore the collection first. All changes remain inside
       // the transaction until the entire workflow completes.
-      await databaseService.execute(
+      const collectionResult = await databaseService.execute(
         `
         UPDATE collections
         SET deletedAt = NULL, updatedAt = ?
         WHERE id = ?
-          AND deletedAt IS NOT NULL
+          AND deletedAt = ?
         `,
-        [timestamp, collectionId]
+        [timestamp, collectionId, deletion.deletedAt]
       );
+
+      if (collectionResult.changes !== 1) {
+        throw new Error(
+          "Collection could not be restored because its deletion state changed"
+        );
+      }
 
       await restoreIds(
         "collection_fields",
         deletion.collectionFieldIds,
-        timestamp
+        timestamp,
+        deletion.deletedAt
       );
 
       await restoreIds(
         "items",
         deletion.itemIds,
-        timestamp
+        timestamp,
+        deletion.deletedAt
       );
 
       await restoreIds(
         "item_values",
         deletion.itemValueIds,
-        timestamp
+        timestamp,
+        deletion.deletedAt
       );
 
       await restoreIds(
         "item_images",
         deletion.itemImageIds,
-        timestamp
+        timestamp,
+        deletion.deletedAt
       );
 
       await restoreIds(
         "item_notes",
         deletion.itemNoteIds,
-        timestamp
+        timestamp,
+        deletion.deletedAt
       );
 
       await restoreIds(
         "tags",
         deletion.tagIds,
-        timestamp
+        timestamp,
+        deletion.deletedAt
       );
 
       await collectionDeletionRepository.markRestored(

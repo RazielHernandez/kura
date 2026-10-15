@@ -40,15 +40,6 @@ export class UpdateItemWorkflow {
   async execute(
     input: UpdateItemWorkflowInput
   ): Promise<Item> {
-    /*
-     * Get the existing item.
-     */
-    const existing =
-      await itemRepository.getById(input.itemId);
-
-    if (!existing) {
-      throw new Error("Item not found");
-    }
 
     /*
      * Load existing values and merge supplied changes.
@@ -56,8 +47,22 @@ export class UpdateItemWorkflow {
      * Values not included in input.values remain unchanged.
      * A supplied null or empty string replaces the old value.
      */
-    const currentValues =
-      await itemValueRepository.getByItemId(input.itemId);
+    const currentValues = await itemValueRepository.getByItemId(input.itemId);
+
+    const incomingValues = input.values ?? [];
+    const fieldIds = incomingValues.map(value => value.fieldId);
+
+    if (new Set(fieldIds).size !== fieldIds.length) {
+      throw new Error(
+        "An item cannot have multiple values for the same field"
+      );
+    }
+
+    if (input.tagIds !== undefined) {
+      if (new Set(input.tagIds).size !== input.tagIds.length) {
+        throw new Error("Duplicate tag IDs are not allowed");
+      }
+    }
 
     const valuesByFieldId = new Map<
       string,
@@ -69,11 +74,8 @@ export class UpdateItemWorkflow {
       ])
     );
 
-    for (const value of input.values ?? []) {
-      valuesByFieldId.set(
-        value.fieldId,
-        value.value
-      );
+    for (const value of incomingValues) {
+      valuesByFieldId.set(value.fieldId, value.value);
     }
 
     const finalValues = Array.from(
@@ -85,44 +87,51 @@ export class UpdateItemWorkflow {
     );
 
     /*
-     * Validate field ownership.
-     *
-     * Validate all fields in the final state, including
-     * existing values that are not being changed.
-     */
-    await validateItemFieldsUseCase.execute({
-      collectionId: existing.collectionId,
-      fieldIds: finalValues.map(
-        value => value.fieldId
-      ),
-    });
-
-    /*
-     * Validate required fields against the final state.
-     */
-    await validateRequiredItemFieldsUseCase.execute({
-      collectionId: existing.collectionId,
-      values: finalValues,
-    });
-
-    /*
-     * Validate tags.
-     *
-     * undefined = don't change tags
-     * []        = remove all tags
-     * [...]     = replace tags
-     */
-    if (input.tagIds !== undefined) {
-      await validateItemTagsUseCase.execute({
-        collectionId: existing.collectionId,
-        tagIds: input.tagIds,
-      });
-    }
-
-    /*
      * Start transaction after validation succeeds.
      */
     return databaseService.transaction(async () => {
+
+      const existing = await itemRepository.getById(input.itemId);
+
+      if (!existing) {
+        throw new Error("Item not found");
+      }
+
+      /*
+      * Validate field ownership.
+      *
+      * Validate all fields in the final state, including
+      * existing values that are not being changed.
+      */
+      await validateItemFieldsUseCase.execute({
+        collectionId: existing.collectionId,
+        fieldIds: finalValues.map(
+          value => value.fieldId
+        ),
+      });
+
+      /*
+      * Validate required fields against the final state.
+      */
+      await validateRequiredItemFieldsUseCase.execute({
+        collectionId: existing.collectionId,
+        values: finalValues,
+      });
+
+      /*
+      * Validate tags.
+      *
+      * undefined = don't change tags
+      * []        = remove all tags
+      * [...]     = replace tags
+      */
+      if (input.tagIds !== undefined) {
+        await validateItemTagsUseCase.execute({
+          collectionId: existing.collectionId,
+          tagIds: input.tagIds,
+        });
+      }
+      
       /*
        * Update basic item information.
        */

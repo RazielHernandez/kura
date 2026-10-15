@@ -83,7 +83,7 @@ export class ItemImageRepository extends BaseRepository<ItemImage> {
       updatedAt: now(),
     };
 
-    await this.execute(
+    const result = await this.execute(
       `
       UPDATE item_images
       SET
@@ -102,6 +102,10 @@ export class ItemImageRepository extends BaseRepository<ItemImage> {
         id,
       ]
     );
+
+    if (result.changes !== 1) {
+      return null;
+    }
 
     return updatedImage;
   }
@@ -151,7 +155,7 @@ export class ItemImageRepository extends BaseRepository<ItemImage> {
 
     const updatedAt = now();
 
-    await this.execute(
+    const result = await this.execute(
       `
       UPDATE item_images
       SET
@@ -162,6 +166,10 @@ export class ItemImageRepository extends BaseRepository<ItemImage> {
       `,
       [sortOrder, updatedAt, id]
     );
+
+    if (result.changes !== 1) {
+      return null;
+    }
 
     return {
       ...existing,

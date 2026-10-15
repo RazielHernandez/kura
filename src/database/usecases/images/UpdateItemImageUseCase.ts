@@ -35,12 +35,6 @@ export class UpdateItemImageUseCase {
       );
     }
 
-    const existing = await itemImageRepository.getById(id);
-
-    if (!existing) {
-      throw new Error(`Image not found: ${id}`);
-    }
-
     const updated = await itemImageRepository.update(
       id,
       {

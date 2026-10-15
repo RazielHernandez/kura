@@ -151,6 +151,7 @@ export class DeleteCollectionWorkflow {
       // Save the exact records this operation will delete.
       await collectionDeletionRepository.create({
         collectionId,
+        deletedAt: timestamp,
         collectionFieldIds,
         itemIds,
         itemValueIds,

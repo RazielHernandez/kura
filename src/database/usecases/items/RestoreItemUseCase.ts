@@ -8,16 +8,19 @@ export class RestoreItemUseCase {
       throw new Error("Item ID is required");
     }
 
-    const exists =
-      await itemRepository.existsIncludingDeleted(itemId);
+    const item =
+      await itemRepository.getByIdIncludingDeleted(itemId);
 
-    if (!exists) {
+    if (!item) {
       throw new Error("Item not found");
+    }
+
+    if (!item.deletedAt) {
+      throw new Error("Item is not deleted");
     }
 
     await itemRepository.restore(itemId);
   }
 }
 
-export const restoreItemUseCase =
-  new RestoreItemUseCase();
+export const restoreItemUseCase = new RestoreItemUseCase();

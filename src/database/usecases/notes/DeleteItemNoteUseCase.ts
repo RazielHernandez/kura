@@ -10,12 +10,6 @@ export class DeleteItemNoteUseCase {
       throw new Error("Note ID is required");
     }
 
-    const note = await itemNoteRepository.getById(id);
-
-    if (!note) {
-      throw new Error(`Note not found: ${id}`);
-    }
-
     await itemNoteRepository.softDelete(id);
   }
 }

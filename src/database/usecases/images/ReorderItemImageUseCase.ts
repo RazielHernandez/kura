@@ -24,13 +24,7 @@ export class ReorderItemImageUseCase {
         "Image sort order must be a non-negative integer"
       );
     }
-
-    const existing = await itemImageRepository.getById(id);
-
-    if (!existing) {
-      throw new Error(`Image not found: ${id}`);
-    }
-
+    
     const updated = await itemImageRepository.reorder(
       id,
       input.sortOrder

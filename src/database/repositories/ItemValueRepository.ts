@@ -69,7 +69,7 @@ export class ItemValueRepository extends BaseRepository<ItemValue> {
       updatedAt: now(),
     };
 
-    await this.execute(
+    const result = await this.execute(
       `
       UPDATE item_values
       SET
@@ -84,6 +84,10 @@ export class ItemValueRepository extends BaseRepository<ItemValue> {
         id,
       ]
     );
+
+    if (result.changes !== 1) {
+      return null;
+    }
 
     return updatedItemValue;
   }
@@ -180,38 +184,34 @@ export class ItemValueRepository extends BaseRepository<ItemValue> {
         fieldId
       );
 
-    if (existing) {
-      const updatedAt = now();
-
-      await this.execute(
-        `
-        UPDATE item_values
-        SET
-          value = ?,
-          updatedAt = ?,
-          deletedAt = NULL
-        WHERE id = ?
-        `,
-        [
-          value,
-          updatedAt,
-          existing.id,
-        ]
-      );
-
-      return {
-        ...existing,
-        value,
-        updatedAt,
-        deletedAt: null,
-      };
+    if (!existing) {
+      return this.create(itemId, fieldId, value);
     }
 
-    return this.create(
-      itemId,
-      fieldId,
-      value
+    const updatedAt = now();
+
+    const result = await this.execute(
+      `
+      UPDATE item_values
+      SET
+        value = ?,
+        updatedAt = ?,
+        deletedAt = NULL
+      WHERE id = ?
+      `,
+      [value, updatedAt, existing.id]
     );
+
+    if (result.changes !== 1) {
+      throw new Error("Failed to set item value");
+    }
+
+    return {
+      ...existing,
+      value,
+      updatedAt,
+      deletedAt: null,
+    };
   }
 
   async deleteByItemAndField(

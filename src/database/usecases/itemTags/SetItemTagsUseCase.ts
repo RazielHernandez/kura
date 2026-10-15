@@ -1,7 +1,8 @@
+
 import { databaseService } from "../../DatabaseService";
 import { itemRepository } from "../../repositories/ItemRepository";
-import { tagRepository } from "../../repositories/TagRepository";
 import { itemTagRepository } from "../../repositories/ItemTagRepository";
+import { validateItemTagsUseCase } from "../items/ValidateItemTagsUseCase";
 
 export interface SetItemTagsInput {
   itemId: string;
@@ -9,53 +10,44 @@ export interface SetItemTagsInput {
 }
 
 export class SetItemTagsUseCase {
-  async execute(
-    input: SetItemTagsInput
-  ): Promise<void> {
+  async execute(input: SetItemTagsInput): Promise<void> {
     const itemId = input.itemId.trim();
 
     if (!itemId) {
       throw new Error("Item ID is required");
     }
 
-    const item = await itemRepository.getById(itemId);
-
-    if (!item) {
-      throw new Error(`Item not found: ${itemId}`);
+    if (!Array.isArray(input.tagIds)) {
+      throw new Error("Tag IDs must be an array");
     }
 
-    // Remove duplicate IDs.
-    const tagIds = [
-      ...new Set(
-        input.tagIds
-          .map((id) => id.trim())
-          .filter(Boolean)
-      ),
-    ];
+    const tagIds = input.tagIds.map((id) =>
+      typeof id === "string" ? id.trim() : ""
+    );
 
-    // Validate every tag before modifying anything.
-    for (const tagId of tagIds) {
-      const tag = await tagRepository.getById(tagId);
+    if (tagIds.some((id) => !id)) {
+      throw new Error("Tag IDs cannot be empty");
+    }
 
-      if (!tag) {
-        throw new Error(`Tag not found: ${tagId}`);
-      }
-
-      if (tag.collectionId !== item.collectionId) {
-        throw new Error(
-          `Tag ${tagId} does not belong to the item's collection`
-        );
-      }
+    if (new Set(tagIds).size !== tagIds.length) {
+      throw new Error("Duplicate tag IDs are not allowed");
     }
 
     await databaseService.transaction(async () => {
-      await itemTagRepository.setTagsForItem(
-        itemId,
-        tagIds
-      );
+      const item = await itemRepository.getById(itemId);
+
+      if (!item) {
+        throw new Error(`Item not found: ${itemId}`);
+      }
+
+      await validateItemTagsUseCase.execute({
+        collectionId: item.collectionId,
+        tagIds,
+      });
+
+      await itemTagRepository.setTagsForItem(itemId, tagIds);
     });
   }
 }
 
-export const setItemTagsUseCase =
-  new SetItemTagsUseCase();
+export const setItemTagsUseCase = new SetItemTagsUseCase();

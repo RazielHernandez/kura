@@ -21,12 +21,6 @@ export class UpdateItemNoteUseCase {
       throw new Error("Note content is required");
     }
 
-    const existing = await itemNoteRepository.getById(id);
-
-    if (!existing) {
-      throw new Error(`Note not found: ${id}`);
-    }
-
     const updated = await itemNoteRepository.update(
       id,
       content

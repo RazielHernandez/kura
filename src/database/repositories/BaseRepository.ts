@@ -69,6 +69,20 @@ export abstract class BaseRepository<
     );
   }
 
+  async getByIdIncludingDeleted(
+    id: string
+  ): Promise<T | null> {
+    return this.queryFirst(
+      `
+      SELECT *
+      FROM ${this.tableName}
+      WHERE id = ?
+      `,
+      [id]
+    );
+  }
+
+
   async getAll(): Promise<T[]> {
     return this.query(
       `
@@ -97,29 +111,43 @@ export abstract class BaseRepository<
   async softDelete(id: string): Promise<void> {
     const timestamp = now();
 
-    await this.execute(
+    const result = await this.execute(
       `
       UPDATE ${this.tableName}
       SET
         deletedAt = ?,
         updatedAt = ?
       WHERE id = ?
+        AND deletedAt IS NULL
       `,
       [timestamp, timestamp, id]
     );
+
+    if (result.changes !== 1) {
+      throw new Error(
+        `Cannot delete record: "${id}" was not found or is already deleted`
+      );
+    }
   }
 
   async restore(id: string): Promise<void> {
-    await this.execute(
+    const result = await this.execute(
       `
       UPDATE ${this.tableName}
       SET
         deletedAt = NULL,
         updatedAt = ?
       WHERE id = ?
+        AND deletedAt IS NOT NULL
       `,
       [now(), id]
     );
+
+    if (result.changes !== 1) {
+      throw new Error(
+        `Cannot restore record: "${id}" was not found or is not deleted`
+      );
+    }
   }
 
   async hardDelete(id: string): Promise<void> {

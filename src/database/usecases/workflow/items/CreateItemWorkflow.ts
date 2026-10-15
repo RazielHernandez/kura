@@ -47,6 +47,14 @@ export class CreateItemWorkflow {
     
     const values = input.values ?? [];
 
+    const fieldIds = values.map(value => value.fieldId);
+
+    if (new Set(fieldIds).size !== fieldIds.length) {
+      throw new Error(
+        "An item cannot have multiple values for the same field"
+      );
+    }
+
     await validateItemFieldsUseCase.execute({
       collectionId: input.collectionId,
       fieldIds: values.map(value => value.fieldId),
@@ -63,6 +71,17 @@ export class CreateItemWorkflow {
      * Every tag must belong to the item collection.
      */
     if (input.tagIds?.length) {
+      await validateItemTagsUseCase.execute({
+        collectionId: input.collectionId,
+        tagIds: input.tagIds,
+      });
+    }
+
+    if (input.tagIds) {
+      if (new Set(input.tagIds).size !== input.tagIds.length) {
+        throw new Error("Duplicate tag IDs are not allowed");
+      }
+
       await validateItemTagsUseCase.execute({
         collectionId: input.collectionId,
         tagIds: input.tagIds,

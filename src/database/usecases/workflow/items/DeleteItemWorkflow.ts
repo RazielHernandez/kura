@@ -9,27 +9,24 @@ export class DeleteItemWorkflow {
   async execute(
     itemId: string
   ): Promise<void> {
-    /*
-     * Find the active item first.
-     */
-    const item =
-      await itemRepository.getById(itemId);
-
-    if (!item) {
-      throw new Error("Item not found");
-    }
 
     /*
      * Delete the item and create its history
      * entry as one atomic operation.
      */
     await databaseService.transaction(async () => {
+      const currentItem = await itemRepository.getById(itemId);
+
+      if (!currentItem) {
+        throw new Error("Item not found");
+      }
+
       await deleteItemUseCase.execute(itemId);
 
       await itemHistoryRepository.create(
-        item.id,
+        currentItem.id,
         "DELETED",
-        `Item "${item.name}" was deleted`
+        `Item "${currentItem.name}" was deleted`
       );
     });
   }
