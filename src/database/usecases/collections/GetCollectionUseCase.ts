@@ -1,4 +1,4 @@
-import { Collection } from "../../models/collection";
+import { Collection } from "../../models/Collection";
 import { collectionRepository } from "../../repositories/CollectionRepository";
 
 export class GetCollectionUseCase {

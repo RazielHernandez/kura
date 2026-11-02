@@ -120,5 +120,4 @@ export class RestoreCollectionWorkflow {
   }
 }
 
-export const restoreCollectionWorkflow =
-  new RestoreCollectionWorkflow();
+export const restoreCollectionWorkflow = new RestoreCollectionWorkflow();

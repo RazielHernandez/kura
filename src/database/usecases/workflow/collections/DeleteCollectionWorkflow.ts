@@ -209,5 +209,4 @@ export class DeleteCollectionWorkflow {
   }
 }
 
-export const deleteCollectionWorkflow =
-  new DeleteCollectionWorkflow();
+export const deleteCollectionWorkflow = new DeleteCollectionWorkflow();

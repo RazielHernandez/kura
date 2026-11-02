@@ -3,6 +3,7 @@
     "name": "kura",
     "slug": "kura",
     "version": "1.0.0",
+    "scheme": "kura",
     "orientation": "portrait",
     "icon": "./assets/kura-icon.png",
     "userInterfaceStyle": "light",
@@ -22,7 +23,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-router"
     ]
   }
 }
