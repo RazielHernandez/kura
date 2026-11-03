@@ -1,6 +1,7 @@
 
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Collection } from "../../../database/models/Collection";
+import { router } from "expo-router/build/global-state/router";
 
 interface CollectionCardProps {
   collection: Collection;
@@ -14,9 +15,9 @@ export function CollectionCard({
   return (
     <Pressable
       style={styles.card}
-      onPress={() => {
-        // We'll navigate to collection details later.
-      }}
+      onPress={() =>
+        router.push(`/collections/${collection.id}`)
+    }
     >
       <View
         style={[
