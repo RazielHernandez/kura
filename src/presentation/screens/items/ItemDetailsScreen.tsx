@@ -13,6 +13,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { router } from "expo-router";
 import { useItemDetailsStore } from "../../../database/stores/items/ItemDetailsStore";
@@ -108,138 +109,148 @@ export function ItemDetailsScreen({
 
   if (isLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>
-          Loading item...
-        </Text>
-      </View>
+      <SafeAreaView style={styles.screen} edges={["top", "bottom"]}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" />
+          <Text style={styles.loadingText}>
+            Loading item...
+          </Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (error || !item) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>
-          {error ?? "Item not found."}
-        </Text>
-
-        <Pressable
-          style={styles.retryButton}
-          onPress={() => loadDetails(itemId)}
-        >
-          <Text style={styles.retryButtonText}>
-            Try again
+      <SafeAreaView style={styles.screen} edges={["top", "bottom"]}>
+        <View style={styles.center}>
+          <Text style={styles.errorText}>
+            {error ?? "Item not found."}
           </Text>
-        </Pressable>
-      </View>
+
+          <Pressable
+            style={styles.retryButton}
+            onPress={() => loadDetails(itemId)}
+          >
+            <Text style={styles.retryButtonText}>
+              Try again
+            </Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView
+    <SafeAreaView
       style={styles.screen}
-      contentContainerStyle={styles.content}
+      edges={["top", "bottom"]}
     >
-      {/* Item header */}
-      <View style={styles.header}>
-        <View style={styles.iconContainer}>
-          <Text style={styles.icon}>📦</Text>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Item header */}
+        <View style={styles.header}>
+          <View style={styles.iconContainer}>
+            <Text style={styles.icon}>📦</Text>
+          </View>
+
+          <Text style={styles.title}>{item.name}</Text>
+
+          {item.favorite && (
+            <Text style={styles.favorite}>★ Favorite</Text>
+          )}
+
+          {item.description && (
+            <Text style={styles.description}>
+              {item.description}
+            </Text>
+          )}
         </View>
 
-        <Text style={styles.title}>{item.name}</Text>
+        {/* Custom fields */}
+        {fields.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              Custom Fields
+            </Text>
 
-        {item.favorite && (
-          <Text style={styles.favorite}>★ Favorite</Text>
+            {fields.map((field) => {
+              const value =
+                valuesByFieldId.get(field.id) ?? null;
+
+              return (
+                <View
+                  key={field.id}
+                  style={styles.fieldRow}
+                >
+                  <Text style={styles.fieldName}>
+                    {field.name}
+                  </Text>
+
+                  <Text style={styles.fieldValue}>
+                    {formatValue(field.fieldType, value)}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
         )}
 
-        {item.description && (
-          <Text style={styles.description}>
-            {item.description}
-          </Text>
-        )}
-      </View>
-
-      {/* Custom fields */}
-      {fields.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Custom Fields
-          </Text>
-
-          {fields.map((field) => {
-            const value =
-              valuesByFieldId.get(field.id) ?? null;
-
-            return (
-              <View
-                key={field.id}
-                style={styles.fieldRow}
+        {/* Actions - placeholders for future implementation */}
+        <View style={styles.actions}>
+          <Pressable
+              style={styles.actionButton}
+              onPress={() =>
+                  router.push(
+                  `/collections/${item.collectionId}/items/${item.id}/edit`
+                  )
+              }
               >
-                <Text style={styles.fieldName}>
-                  {field.name}
-                </Text>
+              <Text style={styles.actionText}>
+                  ✏️ Edit Item
+              </Text>
+          </Pressable>
 
-                <Text style={styles.fieldValue}>
-                  {formatValue(field.fieldType, value)}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-      )}
+          <Pressable
+              style={styles.actionButton}
+              onPress={handleDeleteItem}
+              >
+              <Text style={styles.actionText}>
+                  🗑️ Delete Item
+              </Text>
+          </Pressable>
 
-      {/* Actions - placeholders for future implementation */}
-      <View style={styles.actions}>
-        <Pressable
+          {itemError && (
+              <Text style={{ color: "red" }}>
+                  {itemError}
+              </Text>
+          )}
+
+          <Pressable
+            style={styles.actionButton}
+            onPress={() => {
+              // We'll implement Notes next.
+            }}
+          >
+            <Text style={styles.actionText}>📝 Notes</Text>
+          </Pressable>
+
+          <Pressable
             style={styles.actionButton}
             onPress={() =>
                 router.push(
-                `/collections/${item.collectionId}/items/${item.id}/edit`
+                    `/collections/${item.collectionId}/items/${item.id}/history`
                 )
             }
-            >
-            <Text style={styles.actionText}>
-                ✏️ Edit Item
-            </Text>
-        </Pressable>
-
-        <Pressable
-            style={styles.actionButton}
-            onPress={handleDeleteItem}
-            >
-            <Text style={styles.actionText}>
-                🗑️ Delete Item
-            </Text>
-        </Pressable>
-
-        {itemError && (
-            <Text style={{ color: "red" }}>
-                {itemError}
-            </Text>
-        )}
-
-        <Pressable
-          style={styles.actionButton}
-          onPress={() => {
-            // We'll implement Notes next.
-          }}
-        >
-          <Text style={styles.actionText}>📝 Notes</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.actionButton}
-          onPress={() =>
-              router.push(
-                  `/collections/${item.collectionId}/items/${item.id}/history`
-              )
-          }
-        >
-          <Text style={styles.actionText}>📜 History</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+          >
+            <Text style={styles.actionText}>📜 History</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+    
   );
 }
 

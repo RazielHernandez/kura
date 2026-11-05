@@ -16,6 +16,7 @@ import { router } from "expo-router";
 import { useItemDetailsStore } from "../../../database/stores/items/ItemDetailsStore";
 import { useItemStore } from "../../../database/stores/items/ItemStore";
 import { DynamicFieldInput } from "../../components/items/DynamicFieldInput";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface EditItemScreenProps {
   itemId: string;
@@ -128,129 +129,144 @@ export function EditItemScreen({
   if (isLoading || !initialized) {
     if (loadError) {
       return (
-        <View style={styles.center}>
-          <Text style={styles.error}>{loadError}</Text>
-        </View>
+        <SafeAreaView style={styles.screen} edges={["top", "bottom"]}>
+          <View style={styles.center}>
+            <Text style={styles.error}>{loadError}</Text>
+          </View>
+        </SafeAreaView>
       );
     }
 
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>Loading item...</Text>
-      </View>
+      <SafeAreaView style={styles.screen} edges={["top", "bottom"]}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" />
+          <Text style={styles.loadingText}>Loading item...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (!item) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.error}>
-          {loadError ?? "Item not found."}
-        </Text>
-      </View>
+      <SafeAreaView style={styles.screen} edges={["top", "bottom"]}>
+        <View style={styles.center}>
+          <Text style={styles.error}>
+            {loadError ?? "Item not found."}
+          </Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.screen}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.title}>Edit Item</Text>
-        <Text style={styles.subtitle}>
-          Update {item.name}
-        </Text>
+    <SafeAreaView
+      style={styles.screen}
+      edges={["top", "bottom"]}
+    >
+      <View style={styles.screenContent}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.title}>Edit Item</Text>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Basic Information
+          <Text style={styles.subtitle}>
+            Update {item.name}
           </Text>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>
-              Name <Text style={styles.required}>*</Text>
-            </Text>
-
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter item name"
-              style={styles.input}
-              maxLength={120}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Description</Text>
-
-            <TextInput
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Add a description..."
-              style={[styles.input, styles.textArea]}
-              multiline
-              textAlignVertical="top"
-            />
-          </View>
-
-          <View style={styles.favoriteRow}>
-            <Text style={styles.label}>Favorite</Text>
-            <Switch
-              value={favorite}
-              onValueChange={setFavorite}
-            />
-          </View>
-        </View>
-
-        {fields.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              Custom Fields
+              Basic Information
             </Text>
 
-            {fields.map((field) => (
-              <DynamicFieldInput
-                key={field.id}
-                field={field}
-                value={fieldValues[field.id] ?? null}
-                onChange={(value) =>
-                  handleValueChange(field.id, value)
-                }
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>
+                Name <Text style={styles.required}>*</Text>
+              </Text>
+
+              <TextInput
+                value={name}
+                onChangeText={setName}
+                placeholder="Enter item name"
+                style={styles.input}
+                maxLength={120}
               />
-            ))}
-          </View>
-        )}
+            </View>
 
-        {(localError || saveError) && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.error}>
-              {localError ?? saveError}
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Description</Text>
 
-      <View style={styles.footer}>
-        <Pressable
-          style={[
-            styles.saveButton,
-            isSaving && styles.disabledButton,
-          ]}
-          disabled={isSaving}
-          onPress={handleSave}
-        >
-          {isSaving ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.saveButtonText}>
-              Save Changes
-            </Text>
+              <TextInput
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Add a description..."
+                style={[styles.input, styles.textArea]}
+                multiline
+                textAlignVertical="top"
+              />
+            </View>
+
+            <View style={styles.favoriteRow}>
+              <Text style={styles.label}>Favorite</Text>
+
+              <Switch
+                value={favorite}
+                onValueChange={setFavorite}
+              />
+            </View>
+          </View>
+
+          {fields.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                Custom Fields
+              </Text>
+
+              {fields.map((field) => (
+                <DynamicFieldInput
+                  key={field.id}
+                  field={field}
+                  value={fieldValues[field.id] ?? null}
+                  onChange={(value) =>
+                    handleValueChange(field.id, value)
+                  }
+                />
+              ))}
+            </View>
           )}
-        </Pressable>
+
+          {(localError || saveError) && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.error}>
+                {localError ?? saveError}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <Pressable
+            style={[
+              styles.saveButton,
+              isSaving && styles.disabledButton,
+            ]}
+            disabled={isSaving}
+            onPress={handleSave}
+          >
+            {isSaving ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.saveButtonText}>
+                Save Changes
+              </Text>
+            )}
+          </Pressable>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -258,6 +274,12 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#F9FAFB",
+  },
+  screenContent: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
     padding: 20,

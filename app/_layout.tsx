@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { databaseService } from "../src/database/DatabaseService";
 
@@ -43,10 +44,13 @@ export default function RootLayout() {
 
   if (status === "loading") {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.message}>Initializing Kura...</Text>
-      </View>
+      <SafeAreaProvider>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" />
+          <Text style={styles.message}>Initializing Kura...</Text>
+        </View>
+      </SafeAreaProvider>
+      
     );
   }
 
