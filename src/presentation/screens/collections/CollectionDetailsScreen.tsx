@@ -48,11 +48,6 @@ export function CollectionDetailsScreen({
     (state) => state.clearDetails
   );
 
-  // useEffect(() => {
-  //   loadDetails(collectionId);
-
-  //   return () => clearDetails();
-  // }, [collectionId, loadDetails, clearDetails]);
   useFocusEffect(
     useCallback(() => {
       loadDetails(collectionId);
@@ -236,25 +231,36 @@ export function CollectionDetailsScreen({
               </Text>
             </View>
           ) : (
+            
             items.map((item) => (
-              <View key={item.id} style={styles.itemCard}>
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>
-                    {item.name}
-                  </Text>
-
-                  {item.description && (
-                    <Text style={styles.itemDescription}>
-                      {item.description}
+              <Pressable
+                key={item.id}
+                onPress={() =>
+                  router.push(
+                    `/collections/${collectionId}/items/${item.id}`
+                  )
+                }
+              >
+                <View style={styles.itemCard}>
+                  <View style={styles.itemInfo}>
+                    <Text style={styles.itemName}>
+                      {item.name}
                     </Text>
+
+                    {item.description && (
+                      <Text style={styles.itemDescription}>
+                        {item.description}
+                      </Text>
+                    )}
+                  </View>
+
+                  {item.favorite && (
+                    <Text style={styles.favoriteIcon}>★</Text>
                   )}
                 </View>
-
-                {item.favorite && (
-                  <Text style={styles.favoriteIcon}>★</Text>
-                )}
-              </View>
+              </Pressable>
             ))
+
           )}
         </View>
       </ScrollView>
