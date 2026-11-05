@@ -206,19 +206,39 @@ export function CollectionDetailsScreen({
           </Pressable>
         </View> */}
         <View style={styles.itemsSection}>
+          
           <View style={styles.itemsHeader}>
             <Text style={styles.sectionTitle}>
               Items ({items.length})
             </Text>
 
-            <Pressable
-              onPress={() =>
-                router.push(`/collections/${collectionId}/items/new`)
-              }
-            >
-              <Text style={styles.addItemText}>+ Add Item</Text>
-            </Pressable>
+            <View style={styles.itemsActions}>
+              <Pressable
+                onPress={() =>
+                  router.push(
+                    `/collections/${collectionId}/deleted-items`
+                  )
+                }
+              >
+                <Text style={styles.deletedItemsText}>
+                  Deleted
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() =>
+                  router.push(
+                    `/collections/${collectionId}/items/new`
+                  )
+                }
+              >
+                <Text style={styles.addItemText}>
+                  + Add Item
+                </Text>
+              </Pressable>
+            </View>
           </View>
+
 
           {items.length === 0 ? (
             <View style={styles.emptyItems}>
@@ -511,5 +531,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: "#F59E0B",
     marginLeft: 12,
+  },
+
+  itemsActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+
+  deletedItemsText: {
+    color: "#64748B",
+    fontWeight: "600",
   },
 });

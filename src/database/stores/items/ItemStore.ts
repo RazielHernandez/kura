@@ -6,6 +6,7 @@ import {
   UpdateItemWorkflowInput,
 } from "../../usecases/workflow/items/UpdateItemWorkflow";
 import { deleteItemWorkflow } from "../../usecases/workflow/items/DeleteItemWorkflow";
+import { restoreItemWorkflow } from "../../usecases/workflow/items/RestoreItemWorkflow";
 
 interface ItemState {
   isSaving: boolean;
@@ -20,6 +21,8 @@ interface ItemState {
   ) => Promise<Item | null>;
 
   deleteItem: (itemId: string) => Promise<boolean>;
+
+  restoreItem: (itemId: string) => Promise<boolean>;
 
   clearError: () => void;
 }
@@ -102,6 +105,26 @@ export const useItemStore = create<ItemState>((set) => ({
 
           return false;
       }
+  },
+
+  restoreItem: async (itemId) => {
+    set({ isSaving: true, error: null });
+
+    try {
+        await restoreItemWorkflow.execute(itemId);
+
+        set({ isSaving: false });
+        return true;
+    } catch (error) {
+        set({
+            isSaving: false,
+            error: error instanceof Error
+                ? error.message
+                : "Unable to restore item."
+        });
+
+        return false;
+    }
   },
 
   clearError: () => set({ error: null }),

@@ -213,13 +213,6 @@ export function ItemDetailsScreen({
             </Text>
         </Pressable>
 
-        <Button
-            title="Delete Item"
-            color="red"
-            onPress={handleDeleteItem}
-            disabled={isSaving}
-        />
-
         {itemError && (
             <Text style={{ color: "red" }}>
                 {itemError}
@@ -237,9 +230,11 @@ export function ItemDetailsScreen({
 
         <Pressable
           style={styles.actionButton}
-          onPress={() => {
-            // We'll implement History next.
-          }}
+          onPress={() =>
+              router.push(
+                  `/collections/${item.collectionId}/items/${item.id}/history`
+              )
+          }
         >
           <Text style={styles.actionText}>📜 History</Text>
         </Pressable>

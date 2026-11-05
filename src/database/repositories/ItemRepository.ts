@@ -248,6 +248,21 @@ export class ItemRepository extends BaseRepository<Item> {
       updatedAt,
     };
   }
+
+  async getDeletedByCollectionId(
+    collectionId: string
+  ): Promise<Item[]> {
+    return this.query(
+      `
+      SELECT *
+      FROM items
+      WHERE collectionId = ?
+        AND deletedAt IS NOT NULL
+      ORDER BY deletedAt DESC
+      `,
+      [collectionId]
+    );
+  }
 }
 
 export const itemRepository = new ItemRepository();
