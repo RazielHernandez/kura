@@ -230,9 +230,11 @@ export function ItemDetailsScreen({
 
           <Pressable
             style={styles.actionButton}
-            onPress={() => {
-              // We'll implement Notes next.
-            }}
+            onPress={() =>
+              router.push(
+                `/collections/${item.collectionId}/items/${item.id}/notes`
+              )
+            }
           >
             <Text style={styles.actionText}>📝 Notes</Text>
           </Pressable>

@@ -180,31 +180,26 @@ export function CollectionDetailsScreen({
           </View>
         )}
 
-        {/* <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Items</Text>
-          <Text style={styles.count}>0</Text>
-        </View>
-
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>
-            No items yet
-          </Text>
-
-          <Text style={styles.emptyText}>
-            Start adding items to your collection.
-          </Text>
+        <View style={styles.tagsSection}>
+          <View>
+            <Text style={styles.sectionTitle}>Tags</Text>
+            <Text style={styles.tagsDescription}>
+              Organize your items with custom tags.
+            </Text>
+          </View>
 
           <Pressable
-            style={styles.primaryButton}
-            onPress={() => {
-              router.push(`/collections/${collectionId}/items/new`);
-            }}
+            style={styles.manageTagsButton}
+            onPress={() =>
+              router.push(`/collections/${collectionId}/tags`)
+            }
           >
-            <Text style={styles.primaryButtonText}>
-              + Add Item
+            <Text style={styles.manageTagsButtonText}>
+              Manage Tags
             </Text>
           </Pressable>
-        </View> */}
+        </View>
+        
         <View style={styles.itemsSection}>
           
           <View style={styles.itemsHeader}>
@@ -462,6 +457,37 @@ const styles = StyleSheet.create({
   backText: {
     color: "#2563EB",
     marginTop: 20,
+  },
+
+  tagsSection: {
+    marginTop: 28,
+    padding: 18,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  tagsDescription: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 5,
+  },
+
+  manageTagsButton: {
+    backgroundColor: "#EFF6FF",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+
+  manageTagsButtonText: {
+    color: "#2563EB",
+    fontSize: 13,
+    fontWeight: "600",
   },
 
   itemsSection: {

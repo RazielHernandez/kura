@@ -33,7 +33,7 @@ export class SetItemTagsUseCase {
       throw new Error("Duplicate tag IDs are not allowed");
     }
 
-    await databaseService.transaction(async () => {
+    // await databaseService.transaction(async () => {
       const item = await itemRepository.getById(itemId);
 
       if (!item) {
@@ -46,7 +46,7 @@ export class SetItemTagsUseCase {
       });
 
       await itemTagRepository.setTagsForItem(itemId, tagIds);
-    });
+    //});
   }
 }
 
