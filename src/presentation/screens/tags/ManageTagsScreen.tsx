@@ -49,7 +49,7 @@ export function ManageTagsScreen({
   const clearTags = useTagStore((state) => state.clearTags);
   const clearError = useTagStore((state) => state.clearError);
 
-  const [modalVisible, setModalVisible] = useState(false);
+  const [formVisible, setFormVisible] = useState(false);
   const [selectedTag, setSelectedTag] = useState<Tag | null>(null);
   const [name, setName] = useState("");
   const [color, setColor] = useState(TAG_COLORS[0]);
@@ -63,28 +63,28 @@ export function ManageTagsScreen({
     };
   }, [collectionId, loadTags, clearTags]);
 
-  const openCreateModal = () => {
+  const openCreateForm = () => {
     setSelectedTag(null);
     setName("");
     setColor(TAG_COLORS[0]);
     setLocalError(null);
     clearError();
-    setModalVisible(true);
+    setFormVisible(true);
   };
 
-  const openEditModal = (tag: Tag) => {
+  const openEditForm = (tag: Tag) => {
     setSelectedTag(tag);
     setName(tag.name);
     setColor(tag.color ?? TAG_COLORS[0]);
     setLocalError(null);
     clearError();
-    setModalVisible(true);
+    setFormVisible(true);
   };
 
-  const closeModal = () => {
+  const closeForm = () => {
     if (isSaving) return;
 
-    setModalVisible(false);
+    setFormVisible(false);
     setSelectedTag(null);
     setName("");
     setLocalError(null);
@@ -108,9 +108,7 @@ export function ManageTagsScreen({
 
 
     if (success) {
-        setModalVisible(false);
-        setSelectedTag(null);
-        setName("");
+      closeForm();
     }
     };
 
@@ -151,7 +149,7 @@ export function ManageTagsScreen({
 
         <Text style={styles.title}>Manage Tags</Text>
 
-        <Pressable onPress={openCreateModal}>
+        <Pressable onPress={openCreateForm}>
           <Text style={styles.addText}>+ Add</Text>
         </Pressable>
       </View>
@@ -180,7 +178,7 @@ export function ManageTagsScreen({
 
             <Pressable
               style={styles.primaryButton}
-              onPress={openCreateModal}
+              onPress={openCreateForm}
             >
               <Text style={styles.primaryButtonText}>
                 Create your first tag
@@ -223,14 +221,14 @@ export function ManageTagsScreen({
 
                 <View style={styles.tagActions}>
                   <Pressable
-                    onPress={() => openEditModal(tag)}
+                    onPress={() => openEditForm(tag)}
                     hitSlop={8}
                   >
                     <Text style={styles.editAction}>Edit</Text>
                   </Pressable>
 
                   <Pressable
-                    onPress={() => handleDelete(tag)}
+                    onPress={() => openEditForm(tag)}
                     hitSlop={8}
                   >
                     <Text style={styles.deleteAction}>Delete</Text>
@@ -242,117 +240,108 @@ export function ManageTagsScreen({
         )}
       </ScrollView>
 
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="none"
-        presentationStyle="overFullScreen"
-        onRequestClose={closeModal}
-        >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {selectedTag ? "Edit Tag" : "New Tag"}
-              </Text>
+      {formVisible && (
+        <View style={styles.formContainer}>
+          <View style={styles.formHeader}>
+            <Text style={styles.formTitle}>
+              {selectedTag ? "Edit Tag" : "New Tag"}
+            </Text>
 
-              <Pressable
-                onPress={closeModal}
-                disabled={isSaving}
-              >
-                <Text style={styles.closeButton}>✕</Text>
-              </Pressable>
-            </View>
-
-            <Text style={styles.inputLabel}>Tag name</Text>
-
-            <TextInput
-              style={styles.nameInput}
-              value={name}
-              onChangeText={(value) => {
-                setName(value);
-                setLocalError(null);
-                clearError();
-              }}
-              placeholder="e.g. Important"
-              placeholderTextColor="#9CA3AF"
-              maxLength={40}
-              editable={!isSaving}
-              autoFocus
-            />
-
-            <Text style={styles.inputLabel}>Tag color</Text>
-
-            <View style={styles.colorsContainer}>
-              {TAG_COLORS.map((tagColor) => (
-                <Pressable
-                  key={tagColor}
-                  style={[
-                    styles.colorOption,
-                    { backgroundColor: tagColor },
-                    color === tagColor && styles.selectedColor,
-                  ]}
-                  onPress={() => setColor(tagColor)}
-                  disabled={isSaving}
-                >
-                  {color === tagColor && (
-                    <Text style={styles.colorCheck}>✓</Text>
-                  )}
-                </Pressable>
-              ))}
-            </View>
-
-            <View
-              style={[
-                styles.previewBadge,
-                {
-                  backgroundColor: `${color}18`,
-                  borderColor: `${color}40`,
-                },
-              ]}
+            <Pressable
+              onPress={closeForm}
+              disabled={isSaving}
             >
-              <Text style={[styles.previewText, { color }]}>
-                {name.trim() || "Tag preview"}
-              </Text>
-            </View>
+              <Text style={styles.closeButton}>✕</Text>
+            </Pressable>
+          </View>
 
-            {localError && (
-              <Text style={styles.errorText}>{localError}</Text>
-            )}
+          <Text style={styles.inputLabel}>Tag name</Text>
 
-            {error && (
-              <Text style={styles.errorText}>{error}</Text>
-            )}
+          <TextInput
+            style={styles.nameInput}
+            value={name}
+            onChangeText={(value) => {
+              setName(value);
+              setLocalError(null);
+              clearError();
+            }}
+            placeholder="e.g. Important"
+            placeholderTextColor="#9CA3AF"
+            maxLength={40}
+            editable={!isSaving}
+          />
 
-            <View style={styles.modalActions}>
+          <Text style={styles.inputLabel}>Tag color</Text>
+
+          <View style={styles.colorsContainer}>
+            {TAG_COLORS.map((tagColor) => (
               <Pressable
-                style={styles.cancelButton}
-                onPress={closeModal}
-                disabled={isSaving}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </Pressable>
-
-              <Pressable
+                key={tagColor}
                 style={[
-                  styles.saveButton,
-                  isSaving && styles.disabledButton,
+                  styles.colorOption,
+                  { backgroundColor: tagColor },
+                  color === tagColor && styles.selectedColor,
                 ]}
-                onPress={handleSave}
+                onPress={() => setColor(tagColor)}
                 disabled={isSaving}
               >
-                {isSaving ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.saveButtonText}>
-                    {selectedTag ? "Save Changes" : "Create Tag"}
-                  </Text>
+                {color === tagColor && (
+                  <Text style={styles.colorCheck}>✓</Text>
                 )}
               </Pressable>
-            </View>
+            ))}
+          </View>
+
+          <View
+            style={[
+              styles.previewBadge,
+              {
+                backgroundColor: `${color}18`,
+                borderColor: `${color}40`,
+              },
+            ]}
+          >
+            <Text style={[styles.previewText, { color }]}>
+              {name.trim() || "Tag preview"}
+            </Text>
+          </View>
+
+          {localError && (
+            <Text style={styles.errorText}>{localError}</Text>
+          )}
+
+          {error && (
+            <Text style={styles.errorText}>{error}</Text>
+          )}
+
+          <View style={styles.modalActions}>
+            <Pressable
+              style={styles.cancelButton}
+              onPress={closeForm}
+              disabled={isSaving}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.saveButton,
+                isSaving && styles.disabledButton,
+              ]}
+              onPress={handleSave}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.saveButtonText}>
+                  {selectedTag ? "Save Changes" : "Create Tag"}
+                </Text>
+              )}
+            </Pressable>
           </View>
         </View>
-      </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -594,5 +583,28 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.6,
+  },
+
+  formContainer: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 20,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+
+  formHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+
+  formTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#0F172A",
   },
 });

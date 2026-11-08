@@ -1,7 +1,7 @@
-
 import { create } from "zustand";
-import { getItemHistoryUseCase } from "../../usecases/history/GetItemHistoryUseCase";
+
 import { ItemHistory } from "../../models/ItemHistory";
+import { getItemHistoryUseCase } from "../../usecases/history/GetItemHistoryUseCase";
 
 interface ItemHistoryState {
   history: ItemHistory[];
@@ -13,42 +13,58 @@ interface ItemHistoryState {
 }
 
 export const useItemHistoryStore =
-  create<ItemHistoryState>((set) => ({
-    history: [],
-    isLoading: false,
-    error: null,
+  create<ItemHistoryState>((set) => {
+    let latestRequestId = 0;
 
-    loadHistory: async (itemId) => {
-      set({
-        isLoading: true,
-        error: null,
-        history: [],
-      });
+    return {
+      history: [],
+      isLoading: false,
+      error: null,
 
-      try {
-        const history =
-          await getItemHistoryUseCase.execute(itemId);
+      loadHistory: async (itemId) => {
+        const requestId = ++latestRequestId;
 
         set({
-          history,
+          isLoading: true,
+          error: null,
+        });
+
+        try {
+          const history =
+            await getItemHistoryUseCase.execute(itemId);
+
+          if (requestId !== latestRequestId) {
+            return;
+          }
+
+          set({
+            history,
+            isLoading: false,
+            error: null,
+          });
+        } catch (error) {
+          if (requestId !== latestRequestId) {
+            return;
+          }
+
+          set({
+            isLoading: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unable to load item history.",
+          });
+        }
+      },
+
+      clearHistory: () => {
+        latestRequestId += 1;
+
+        set({
+          history: [],
           isLoading: false,
           error: null,
         });
-      } catch (error) {
-        set({
-          isLoading: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Unable to load item history.",
-        });
-      }
-    },
-
-    clearHistory: () =>
-      set({
-        history: [],
-        isLoading: false,
-        error: null,
-      }),
-  }));
+      },
+    };
+  });

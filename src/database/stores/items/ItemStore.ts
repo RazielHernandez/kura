@@ -1,12 +1,44 @@
 import { create } from "zustand";
-import { createItemWorkflow, CreateItemWorkflowInput } from "../../usecases/workflow/items/CreateItemWorkflow";
+
 import { Item } from "../../models/Item";
+
+import {
+  createItemWorkflow,
+  CreateItemWorkflowInput,
+} from "../../usecases/workflow/items/CreateItemWorkflow";
+
 import {
   updateItemWorkflow,
   UpdateItemWorkflowInput,
 } from "../../usecases/workflow/items/UpdateItemWorkflow";
+
 import { deleteItemWorkflow } from "../../usecases/workflow/items/DeleteItemWorkflow";
 import { restoreItemWorkflow } from "../../usecases/workflow/items/RestoreItemWorkflow";
+
+import {
+  purchaseItemWorkflow,
+  PurchaseItemWorkflowInput,
+} from "../../usecases/workflow/items/PurchaseItemWorkflow";
+
+import {
+  sellItemWorkflow,
+  SellItemWorkflowInput,
+} from "../../usecases/workflow/items/SellItemWorkflow";
+
+import {
+  lendItemWorkflow,
+  LendItemWorkflowInput,
+} from "../../usecases/workflow/items/LendItemWorkflow";
+
+import {
+  borrowItemWorkflow,
+  BorrowItemWorkflowInput,
+} from "../../usecases/workflow/items/BorrowItemWorkflow";
+
+import {
+  setItemTagsWorkflow,
+  SetItemTagsWorkflowInput,
+} from "../../usecases/workflow/tags/SetItemTagsWorkflow";
 
 interface ItemState {
   isSaving: boolean;
@@ -21,111 +53,162 @@ interface ItemState {
   ) => Promise<Item | null>;
 
   deleteItem: (itemId: string) => Promise<boolean>;
-
   restoreItem: (itemId: string) => Promise<boolean>;
+
+  purchaseItem: (
+    input: PurchaseItemWorkflowInput
+  ) => Promise<boolean>;
+
+  sellItem: (
+    input: SellItemWorkflowInput
+  ) => Promise<boolean>;
+
+  lendItem: (
+    input: LendItemWorkflowInput
+  ) => Promise<boolean>;
+
+  borrowItem: (
+    input: BorrowItemWorkflowInput
+  ) => Promise<boolean>;
+
+  setItemTags: (
+    input: SetItemTagsWorkflowInput
+  ) => Promise<boolean>;
 
   clearError: () => void;
 }
 
-export const useItemStore = create<ItemState>((set) => ({
-  isSaving: false,
-  error: null,
+function getErrorMessage(
+  error: unknown,
+  fallback: string
+): string {
+  return error instanceof Error ? error.message : fallback;
+}
 
-  createItem: async (input) => {
+export const useItemStore = create<ItemState>((set) => {
+  let pendingMutations = 0;
+
+  const beginMutation = () => {
+    pendingMutations += 1;
+
     set({
       isSaving: true,
       error: null,
     });
+  };
 
-    try {
-      const item = await createItemWorkflow.execute(input);
+  const finishMutation = () => {
+    pendingMutations = Math.max(0, pendingMutations - 1);
 
-      set({
-        isSaving: false,
-        error: null,
-      });
-
-      return item;
-    } catch (error) {
-      set({
-        isSaving: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to create item.",
-      });
-
-      return null;
-    }
-  },
-
-  updateItem: async (input) => {
     set({
-      isSaving: true,
-      error: null,
+      isSaving: pendingMutations > 0,
     });
+  };
+
+  const runAction = async (
+    action: () => Promise<void>,
+    fallback: string
+  ): Promise<boolean> => {
+    beginMutation();
 
     try {
-      const item = await updateItemWorkflow.execute(input);
-
-      set({
-        isSaving: false,
-        error: null,
-      });
-
-      return item;
+      await action();
+      return true;
     } catch (error) {
       set({
-        isSaving: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to update item.",
+        error: getErrorMessage(error, fallback),
       });
 
-      return null;
+      return false;
+    } finally {
+      finishMutation();
     }
-  },
+  };
 
-  deleteItem: async (itemId) => {
-      set({ isSaving: true, error: null });
+  return {
+    isSaving: false,
+    error: null,
+
+    createItem: async (input) => {
+      beginMutation();
 
       try {
-          await deleteItemWorkflow.execute(itemId);
-
-          set({ isSaving: false });
-          return true;
+        return await createItemWorkflow.execute(input);
       } catch (error) {
-          set({
-              isSaving: false,
-              error: error instanceof Error
-                  ? error.message
-                  : "Unable to delete item."
-          });
-
-          return false;
-      }
-  },
-
-  restoreItem: async (itemId) => {
-    set({ isSaving: true, error: null });
-
-    try {
-        await restoreItemWorkflow.execute(itemId);
-
-        set({ isSaving: false });
-        return true;
-    } catch (error) {
         set({
-            isSaving: false,
-            error: error instanceof Error
-                ? error.message
-                : "Unable to restore item."
+          error: getErrorMessage(
+            error,
+            "Unable to create item."
+          ),
         });
 
-        return false;
-    }
-  },
+        return null;
+      } finally {
+        finishMutation();
+      }
+    },
 
-  clearError: () => set({ error: null }),
-}));
+    updateItem: async (input) => {
+      beginMutation();
+
+      try {
+        return await updateItemWorkflow.execute(input);
+      } catch (error) {
+        set({
+          error: getErrorMessage(
+            error,
+            "Unable to update item."
+          ),
+        });
+
+        return null;
+      } finally {
+        finishMutation();
+      }
+    },
+
+    deleteItem: (itemId) =>
+      runAction(
+        () => deleteItemWorkflow.execute(itemId),
+        "Unable to delete item."
+      ),
+
+    restoreItem: (itemId) =>
+      runAction(
+        () => restoreItemWorkflow.execute(itemId),
+        "Unable to restore item."
+      ),
+
+    purchaseItem: (input) =>
+      runAction(
+        () => purchaseItemWorkflow.execute(input),
+        "Unable to record item purchase."
+      ),
+
+    sellItem: (input) =>
+      runAction(
+        () => sellItemWorkflow.execute(input),
+        "Unable to record item sale."
+      ),
+
+    lendItem: (input) =>
+      runAction(
+        () => lendItemWorkflow.execute(input),
+        "Unable to record item loan."
+      ),
+
+    borrowItem: (input) =>
+      runAction(
+        () => borrowItemWorkflow.execute(input),
+        "Unable to record borrowed item."
+      ),
+
+    setItemTags: (input) =>
+      runAction(
+        () => setItemTagsWorkflow.execute(input),
+        "Unable to update item tags."
+      ),
+
+    clearError: () => set({ error: null }),
+  };
+});
