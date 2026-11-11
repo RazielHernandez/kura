@@ -1,5 +1,4 @@
-
-import React, { useEffect, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
     Alert,
     Button,
@@ -8,16 +7,19 @@ import {
 import {
   View,
   Text,
+  Image,
   ScrollView,
   Pressable,
   StyleSheet,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useItemDetailsStore } from "../../../database/stores/items/ItemDetailsStore";
 import { useItemStore } from "../../../database/stores/items/ItemStore";
+import { useItemImageStore } from "../../../database/stores/images/ItemImageStore";
 
 interface ItemDetailsScreenProps {
   itemId: string;
@@ -36,18 +38,29 @@ export function ItemDetailsScreen({
     clearDetails,
   } = useItemDetailsStore();
 
+  const {
+    images,
+    isLoading: isLoadingImages,
+    loadImages,
+    clearImages,
+  } = useItemImageStore();
+
   const deleteItem = useItemStore(state => state.deleteItem);
-    const isSaving = useItemStore(state => state.isSaving);
-    const itemError = useItemStore(state => state.error);
-    const clearError = useItemStore(state => state.clearError);
+  const isSaving = useItemStore(state => state.isSaving);
+  const itemError = useItemStore(state => state.error);
+  const clearError = useItemStore(state => state.clearError);
+  const [selectedPreviewUri, setSelectedPreviewUri] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadDetails(itemId);
-
-    return () => {
-      clearDetails();
-    };
-  }, [itemId]);
+  useFocusEffect(
+    useCallback(() => {
+      loadDetails(itemId);
+      loadImages(itemId);
+    }, [
+      itemId,
+      loadDetails,
+      loadImages,
+    ])
+  );
 
   const valuesByFieldId = useMemo(
     () =>
@@ -169,6 +182,42 @@ export function ItemDetailsScreen({
           )}
         </View>
 
+        {/* Images */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            Images ({images.length})
+          </Text>
+
+          {isLoadingImages ? (
+            <ActivityIndicator size="small" />
+          ) : images.length === 0 ? (
+            <Text style={styles.emptyText}>No images added yet.</Text>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.imageGallery}
+            >
+              {images.map((image) => {
+                const imageUri = image.thumbnailUri ?? image.uri;
+
+                return (
+                  <Pressable
+                    key={image.id}
+                    onPress={() => setSelectedPreviewUri(image.uri)}
+                  >
+                    <Image
+                      source={{ uri: imageUri }}
+                      style={styles.galleryImage}
+                      resizeMode="cover"
+                    />
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
+        </View>
+
         {/* Custom fields */}
         {fields.length > 0 && (
           <View style={styles.section}>
@@ -251,6 +300,33 @@ export function ItemDetailsScreen({
           </Pressable>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={selectedPreviewUri !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedPreviewUri(null)}
+      >
+        <Pressable
+          style={styles.imagePreviewBackdrop}
+          onPress={() => setSelectedPreviewUri(null)}
+        >
+          {selectedPreviewUri && (
+            <Image
+              source={{ uri: selectedPreviewUri }}
+              style={styles.fullScreenImage}
+              resizeMode="contain"
+            />
+          )}
+
+          <Pressable
+            style={styles.closePreviewButton}
+            onPress={() => setSelectedPreviewUri(null)}
+          >
+            <Text style={styles.closePreviewText}>✕</Text>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
     
   );
@@ -366,6 +442,62 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     color: "#FFFFFF",
+    fontWeight: "600",
+  },
+
+  // section: {
+  //   marginTop: 24,
+  // },
+
+  // sectionTitle: {
+  //   fontSize: 18,
+  //   fontWeight: "600",
+  //   marginBottom: 12,
+  // },
+
+  emptyText: {
+    fontSize: 14,
+    opacity: 0.6,
+  },
+
+  imageGallery: {
+    gap: 12,
+  },
+
+  galleryImage: {
+    width: 120,
+    height: 140,
+    borderRadius: 12,
+    backgroundColor: "#E5E7EB",
+  },
+
+  imagePreviewBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  fullScreenImage: {
+    width: "100%",
+    height: "85%",
+  },
+
+  closePreviewButton: {
+    position: "absolute",
+    top: 50,
+    right: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  closePreviewText: {
+    color: "#FFFFFF",
+    fontSize: 20,
     fontWeight: "600",
   },
 });

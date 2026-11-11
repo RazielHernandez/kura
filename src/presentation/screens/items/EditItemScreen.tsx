@@ -10,6 +10,7 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 
 import { router } from "expo-router";
@@ -17,6 +18,11 @@ import { useItemDetailsStore } from "../../../database/stores/items/ItemDetailsS
 import { useItemStore } from "../../../database/stores/items/ItemStore";
 import { DynamicFieldInput } from "../../components/items/DynamicFieldInput";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import { Image } from "react-native";
+import { imagePickerService } from "../../../database/services/ImagePickerService";
+import { SelectedImage } from "../../../database/services/ImagePickerService";
+import { useItemImageStore } from "../../../database/stores/images/ItemImageStore";
 
 interface EditItemScreenProps {
   itemId: string;
@@ -36,6 +42,17 @@ export function EditItemScreen({
   } = useItemDetailsStore();
 
   const {
+    images,
+    isLoading: isLoadingImages,
+    isSaving: isSavingImages,
+    error: imageError,
+    loadImages,
+    addImages,
+    deleteImage,
+    clearImages,
+  } = useItemImageStore();
+
+  const {
     updateItem,
     isSaving,
     error: saveError,
@@ -45,6 +62,9 @@ export function EditItemScreen({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [favorite, setFavorite] = useState(false);
+
+  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
+  const [isPickingImages, setIsPickingImages] = useState(false);
 
   const [fieldValues, setFieldValues] = useState<
     Record<string, string | null>
@@ -57,6 +77,14 @@ export function EditItemScreen({
 
     return () => {
       clearError();
+    };
+  }, [itemId]);
+
+  useEffect(() => {
+    loadImages(itemId);
+
+    return () => {
+      clearImages();
     };
   }, [itemId]);
 
@@ -89,6 +117,63 @@ export function EditItemScreen({
     }));
   };
 
+  const handlePickImages = async () => {
+    try {
+      setIsPickingImages(true);
+
+      const selected = await imagePickerService.pickImages();
+
+      if (selected.length === 0) {
+        return;
+      }
+
+      setSelectedImages((current) => [
+        ...current,
+        ...selected,
+      ]);
+    } catch (error) {
+      Alert.alert(
+        "Unable to select images",
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while selecting images."
+      );
+    } finally {
+      setIsPickingImages(false);
+    }
+  };
+
+  const handleRemoveSelectedImage = (uri: string) => {
+    setSelectedImages((current) =>
+      current.filter((image) => image.uri !== uri)
+    );
+  };
+
+  const handleDeleteExistingImage = async (imageId: string) => {
+    Alert.alert(
+      "Delete image",
+      "Are you sure you want to delete this image?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            const success = await deleteImage(imageId);
+
+            if (!success) {
+              Alert.alert(
+                "Unable to delete image",
+                useItemImageStore.getState().error ??
+                  "Something went wrong."
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleSave = async () => {
     if (!item) return;
 
@@ -110,6 +195,18 @@ export function EditItemScreen({
 
     if (!updatedItem) {
       return;
+    }
+
+    // Save newly selected images.
+    if (selectedImages.length > 0) {
+      const success = await addImages(
+        item.id,
+        selectedImages.map((image) => image.uri)
+      );
+
+      if (!success) {
+        return;
+      }
     }
 
     // Reload details so the previous screen has fresh data.
@@ -219,6 +316,87 @@ export function EditItemScreen({
             </View>
           </View>
 
+          {/* Images */}
+          <View style={styles.section}>
+            <View style={styles.imageHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>Images</Text>
+                <Text style={styles.helperText}>
+                  Manage photos associated with this item
+                </Text>
+              </View>
+
+              <Text style={styles.imageCount}>
+                {images.length + selectedImages.length} photos
+              </Text>
+            </View>
+
+            <Pressable
+              style={styles.addImagesButton}
+              onPress={handlePickImages}
+              disabled={isPickingImages || isSavingImages}
+            >
+              {isPickingImages ? (
+                <ActivityIndicator color="#2563EB" />
+              ) : (
+                <>
+                  <Text style={styles.addImagesIcon}>＋</Text>
+                  <Text style={styles.addImagesText}>Add Photos</Text>
+                </>
+              )}
+            </Pressable>
+
+            {isLoadingImages ? (
+              <ActivityIndicator
+                style={styles.imagesLoading}
+                color="#2563EB"
+              />
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.imageList}
+              >
+                {images.map((image) => (
+                  <View key={image.id} style={styles.imagePreviewContainer}>
+                    <Image
+                      source={{ uri: image.thumbnailUri ?? image.uri }}
+                      style={styles.imagePreview}
+                    />
+
+                    <Pressable
+                      style={styles.removeImageButton}
+                      onPress={() => handleDeleteExistingImage(image.id)}
+                      disabled={isSavingImages}
+                    >
+                      <Text style={styles.removeImageText}>×</Text>
+                    </Pressable>
+                  </View>
+                ))}
+
+                {selectedImages.map((image) => (
+                  <View key={image.uri} style={styles.imagePreviewContainer}>
+                    <Image
+                      source={{ uri: image.uri }}
+                      style={styles.imagePreview}
+                    />
+
+                    <Pressable
+                      style={styles.removeImageButton}
+                      onPress={() => handleRemoveSelectedImage(image.uri)}
+                    >
+                      <Text style={styles.removeImageText}>×</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+
+            {imageError && (
+              <Text style={styles.imageError}>{imageError}</Text>
+            )}
+          </View>
+
           {fields.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
@@ -253,10 +431,10 @@ export function EditItemScreen({
               styles.saveButton,
               isSaving && styles.disabledButton,
             ]}
-            disabled={isSaving}
+            disabled={isSaving || isSavingImages}
             onPress={handleSave}
           >
-            {isSaving ? (
+            {isSaving || isSavingImages ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.saveButtonText}>
@@ -381,5 +559,93 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     color: "#6B7280",
+  },
+
+  imageHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+  helperText: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    marginTop: 4,
+  },
+
+  imageCount: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+
+  addImagesButton: {
+    minHeight: 90,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    borderStyle: "dashed",
+    borderRadius: 12,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  addImagesIcon: {
+    fontSize: 28,
+    color: "#2563EB",
+    marginBottom: 4,
+  },
+
+  addImagesText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2563EB",
+  },
+
+  imagesLoading: {
+    marginTop: 20,
+  },
+
+  imageList: {
+    gap: 12,
+    paddingTop: 16,
+  },
+
+  imagePreviewContainer: {
+    width: 110,
+    height: 110,
+    position: "relative",
+  },
+
+  imagePreview: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 12,
+    backgroundColor: "#E5E7EB",
+  },
+
+  removeImageButton: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#111827",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  removeImageText: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    lineHeight: 23,
+    fontWeight: "600",
+  },
+
+  imageError: {
+    color: "#DC2626",
+    fontSize: 13,
+    marginTop: 12,
   },
 });

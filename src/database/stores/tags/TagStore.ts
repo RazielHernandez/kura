@@ -7,7 +7,6 @@ import { createTagWorkflow } from "../../usecases/workflow/tags/CreateTagWorkflo
 import { updateTagWorkflow } from "../../usecases/workflow/tags/UpdateTagWorkflow";
 import { deleteTagWorkflow } from "../../usecases/workflow/tags/DeleteTagWorkflow";
 
-
 interface TagState {
   tags: Tag[];
 
@@ -35,136 +34,156 @@ interface TagState {
   clearError: () => void;
 }
 
-export const useTagStore = create<TagState>((set, get) => ({
-  tags: [],
+const getErrorMessage = (
+  error: unknown,
+  fallback: string
+): string => {
+  return error instanceof Error ? error.message : fallback;
+};
 
-  isLoading: false,
-  isSaving: false,
-  error: null,
+export const useTagStore = create<TagState>((set, get) => {
+  let latestLoadRequestId = 0;
+  let activeCollectionId: string | null = null;
+  let pendingMutations = 0;
 
-  loadTags: async (collectionId) => {
-    set({ isLoading: true, error: null });
+  const runMutation = async (
+    action: () => Promise<void>,
+    fallback: string
+  ): Promise<boolean> => {
+    pendingMutations++;
+
+    set({
+      isSaving: true,
+      error: null,
+    });
 
     try {
-      const tags = await getTagsByCollectionUseCase.execute(
-        collectionId
-      );
+      await action();
+      return true;
+    } catch (error) {
+      set({
+        error: getErrorMessage(error, fallback),
+      });
+
+      return false;
+    } finally {
+      pendingMutations--;
 
       set({
-        tags,
-        isLoading: false,
+        isSaving: pendingMutations > 0,
+      });
+    }
+  };
+
+  const refreshTagsIfActive = async (
+    collectionId: string
+  ): Promise<void> => {
+    if (activeCollectionId === collectionId) {
+      await get().loadTags(collectionId);
+    }
+  };
+
+  return {
+    tags: [],
+
+    isLoading: false,
+    isSaving: false,
+    error: null,
+
+    loadTags: async (collectionId) => {
+      const requestId = ++latestLoadRequestId;
+
+      const isDifferentCollection =
+        activeCollectionId !== collectionId;
+
+      activeCollectionId = collectionId;
+
+      set({
+        tags: isDifferentCollection ? [] : get().tags,
+        isLoading: true,
         error: null,
       });
-    } catch (error) {
+
+      try {
+        const tags =
+          await getTagsByCollectionUseCase.execute(collectionId);
+
+        // Ignore outdated requests.
+        if (requestId !== latestLoadRequestId) return;
+
+        set({
+          tags,
+          isLoading: false,
+          error: null,
+        });
+      } catch (error) {
+        // Only the latest request can update the store.
+        if (requestId !== latestLoadRequestId) return;
+
+        set({
+          isLoading: false,
+          error: getErrorMessage(error, "Unable to load tags."),
+        });
+      }
+    },
+
+    createTag: async (collectionId, name, color = null) => {
+      return runMutation(async () => {
+        await createTagWorkflow.execute({
+          collectionId,
+          name,
+          color,
+        });
+
+        await refreshTagsIfActive(collectionId);
+      }, "Unable to create tag.");
+    },
+
+    updateTag: async (id, name, color) => {
+      return runMutation(async () => {
+        const existing = get().tags.find((tag) => tag.id === id);
+
+        if (!existing) {
+          throw new Error("Tag not found.");
+        }
+
+        await updateTagWorkflow.execute({
+          id,
+          name,
+          color,
+        });
+
+        await refreshTagsIfActive(existing.collectionId);
+      }, "Unable to update tag.");
+    },
+
+    deleteTag: async (id) => {
+      return runMutation(async () => {
+        const existing = get().tags.find((tag) => tag.id === id);
+
+        if (!existing) {
+          throw new Error("Tag not found.");
+        }
+
+        await deleteTagWorkflow.execute(id);
+
+        await refreshTagsIfActive(existing.collectionId);
+      }, "Unable to delete tag.");
+    },
+
+    clearTags: () => {
+      // Invalidate any outstanding load request.
+      latestLoadRequestId++;
+      activeCollectionId = null;
+
       set({
+        tags: [],
         isLoading: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to load tags.",
+        isSaving: pendingMutations > 0,
+        error: null,
       });
-    }
-  },
+    },
 
-  createTag: async (collectionId, name, color = null) => {
-    set({ isSaving: true, error: null });
-
-    try {
-      await createTagWorkflow.execute({
-        collectionId,
-        name,
-        color,
-      });
-
-      await get().loadTags(collectionId);
-
-      set({ isSaving: false, error: null });
-
-      return true;
-    } catch (error) {
-      set({
-        isSaving: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to create tag.",
-      });
-
-      return false;
-    }
-  },
-
-  updateTag: async (id, name, color) => {
-    set({ isSaving: true, error: null });
-
-    try {
-      const existing = get().tags.find((tag) => tag.id === id);
-
-      if (!existing) {
-        throw new Error("Tag not found.");
-      }
-
-      await updateTagWorkflow.execute({
-        id,
-        name,
-        color,
-      });
-
-      await get().loadTags(existing.collectionId);
-
-      set({ isSaving: false, error: null });
-
-      return true;
-    } catch (error) {
-      set({
-        isSaving: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to update tag.",
-      });
-
-      return false;
-    }
-  },
-
-  deleteTag: async (id) => {
-    set({ isSaving: true, error: null });
-
-    try {
-      const existing = get().tags.find((tag) => tag.id === id);
-
-      if (!existing) {
-        throw new Error("Tag not found.");
-      }
-
-      await deleteTagWorkflow.execute(id);
-
-      await get().loadTags(existing.collectionId);
-
-      set({ isSaving: false, error: null });
-
-      return true;
-    } catch (error) {
-      set({
-        isSaving: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to delete tag.",
-      });
-
-      return false;
-    }
-  },
-
-  clearTags: () =>
-    set({
-      tags: [],
-      isLoading: false,
-      isSaving: false,
-      error: null,
-    }),
-
-  clearError: () => set({ error: null }),
-}));
+    clearError: () => set({ error: null }),
+  };
+});

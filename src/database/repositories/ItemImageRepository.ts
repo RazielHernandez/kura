@@ -178,6 +178,47 @@ export class ItemImageRepository extends BaseRepository<ItemImage> {
     };
   }
 
+
+  async reorderAll(
+    itemId: string,
+    imageIds: string[]
+  ): Promise<void> {
+    const images = await this.getByItemId(itemId);
+
+    if (images.length !== imageIds.length) {
+      throw new Error(
+        "The ordered image list must contain every image exactly once."
+      );
+    }
+
+    const existingIds = new Set(images.map(image => image.id));
+    const requestedIds = new Set(imageIds);
+
+    if (
+      requestedIds.size !== imageIds.length ||
+      imageIds.some(id => !existingIds.has(id))
+    ) {
+      throw new Error(
+        "The ordered image list contains invalid or duplicate image IDs."
+      );
+    }
+
+    const timestamp = now();
+
+    for (const [sortOrder, id] of imageIds.entries()) {
+      await this.execute(
+        `
+        UPDATE item_images
+        SET sortOrder = ?, updatedAt = ?
+        WHERE id = ?
+          AND itemId = ?
+          AND deletedAt IS NULL
+        `,
+        [sortOrder, timestamp, id, itemId]
+      );
+    }
+  }
+
   async deleteByItemId(
     itemId: string
   ): Promise<void> {

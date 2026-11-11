@@ -228,7 +228,7 @@ export function ManageTagsScreen({
                   </Pressable>
 
                   <Pressable
-                    onPress={() => openEditForm(tag)}
+                    onPress={() => handleDelete(tag)}
                     hitSlop={8}
                   >
                     <Text style={styles.deleteAction}>Delete</Text>

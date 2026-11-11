@@ -45,13 +45,7 @@ export function ItemNotesScreen({
     null
   );
 
-//   useEffect(() => {
-//     loadNotes(itemId);
 
-//     return () => {
-//       clearNotes();
-//     };
-//   }, [itemId]);
     useEffect(() => {
         loadNotes(itemId);
 
@@ -148,22 +142,6 @@ export function ItemNotesScreen({
     });
   };
 
-//   if (isLoading) {
-//     return (
-//       <SafeAreaView
-//         style={styles.screen}
-//         edges={["top", "bottom"]}
-//       >
-//         <View style={styles.center}>
-//           <ActivityIndicator size="large" color="#2563EB" />
-//           <Text style={styles.loadingText}>
-//             Loading notes...
-//           </Text>
-//         </View>
-//       </SafeAreaView>
-//     );
-//   }
-
   return (
     <SafeAreaView
       style={styles.screen}
@@ -202,31 +180,7 @@ export function ItemNotesScreen({
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* {notes.length === 0 && !error ? (
-          <View style={styles.emptyContainer}>
-            <View style={styles.emptyIcon}>
-              <Text style={styles.emptyIconText}>✎</Text>
-            </View>
-
-            <Text style={styles.emptyTitle}>
-              No notes yet
-            </Text>
-
-            <Text style={styles.emptyDescription}>
-              Keep track of important details, thoughts, and
-              information about this item.
-            </Text>
-
-            <Pressable
-              style={styles.emptyButton}
-              onPress={openCreateModal}
-            >
-              <Text style={styles.emptyButtonText}>
-                Create your first note
-              </Text>
-            </Pressable>
-          </View>
-        ) : ( */}
+        
         {isLoading && notes.length === 0 ? (
             <View style={styles.center}>
             <ActivityIndicator size="large" color="#2563EB" />

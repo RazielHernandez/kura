@@ -1,5 +1,8 @@
+
 import { Item } from "../../../models/Item";
 import { databaseService } from "../../../DatabaseService";
+
+import { imageStorageService, StoredImage } from "../../../services/ImageStorageService";
 
 import { itemHistoryRepository } from "../../../repositories/ItemHistoryRepository";
 import { itemImageRepository } from "../../../repositories/ItemImageRepository";
@@ -40,13 +43,9 @@ export class CreateItemWorkflow {
 
     /*
      * Validate fields.
-     *
-     * Every field must exist and belong
-     * to the item collection.
      */
-    
-    const values = input.values ?? [];
 
+    const values = input.values ?? [];
     const fieldIds = values.map(value => value.fieldId);
 
     if (new Set(fieldIds).size !== fieldIds.length) {
@@ -57,7 +56,7 @@ export class CreateItemWorkflow {
 
     await validateItemFieldsUseCase.execute({
       collectionId: input.collectionId,
-      fieldIds: values.map(value => value.fieldId),
+      fieldIds,
     });
 
     await validateRequiredItemFieldsUseCase.execute({
@@ -67,109 +66,141 @@ export class CreateItemWorkflow {
 
     /*
      * Validate tags.
-     *
-     * Every tag must belong to the item collection.
      */
-    if (input.tagIds?.length) {
-      await validateItemTagsUseCase.execute({
-        collectionId: input.collectionId,
-        tagIds: input.tagIds,
-      });
-    }
 
     if (input.tagIds) {
       if (new Set(input.tagIds).size !== input.tagIds.length) {
         throw new Error("Duplicate tag IDs are not allowed");
       }
 
-      await validateItemTagsUseCase.execute({
-        collectionId: input.collectionId,
-        tagIds: input.tagIds,
-      });
+      if (input.tagIds.length > 0) {
+        await validateItemTagsUseCase.execute({
+          collectionId: input.collectionId,
+          tagIds: input.tagIds,
+        });
+      }
     }
 
     /*
-     * Start transaction only after validation
-     * has succeeded.
+     * Store images before starting the database transaction.
+     *
+     * These are permanent local file URIs, not gallery URIs.
      */
-    return databaseService.transaction(async () => {
 
-      const item =
-        await createItemUseCase.execute({
+    const storedImages: StoredImage[] = [];
+
+    try {
+      if (input.images?.length) {
+        for (const image of input.images) {
+          const storedImage =
+            await imageStorageService.storeImage(image.uri);
+
+          storedImages.push(storedImage);
+        }
+      }
+
+      /*
+       * Database transaction.
+       */
+
+      return await databaseService.transaction(async () => {
+
+        const item = await createItemUseCase.execute({
           collectionId: input.collectionId,
           name: input.name,
           description: input.description,
           favorite: input.favorite,
         });
 
-      /*
-       * Values
-       */
-      if (input.values?.length) {
-        for (const value of input.values) {
-          await itemValueRepository.setValue(
-            item.id,
-            value.fieldId,
-            value.value
-          );
-        }
-      }
+        /*
+         * Values
+         */
 
-      /*
-       * Tags
-       */
-      if (input.tagIds?.length) {
-        await itemTagRepository.setTagsForItem(
-          item.id,
-          input.tagIds
-        );
-      }
-
-      /*
-       * Notes
-       */
-      if (input.notes?.length) {
-        for (const content of input.notes) {
-          const trimmedContent = content.trim();
-
-          if (!trimmedContent) {
-            continue;
+        if (input.values?.length) {
+          for (const value of input.values) {
+            await itemValueRepository.setValue(
+              item.id,
+              value.fieldId,
+              value.value
+            );
           }
+        }
 
-          await itemNoteRepository.create(
+        /*
+         * Tags
+         */
+
+        if (input.tagIds?.length) {
+          await itemTagRepository.setTagsForItem(
             item.id,
-            trimmedContent
+            input.tagIds
           );
         }
-      }
 
-      /*
-       * Images
-       */
-      if (input.images?.length) {
-        for (const image of input.images) {
+        /*
+         * Notes
+         */
+
+        if (input.notes?.length) {
+          for (const content of input.notes) {
+            const trimmedContent = content.trim();
+
+            if (!trimmedContent) {
+              continue;
+            }
+
+            await itemNoteRepository.create(
+              item.id,
+              trimmedContent
+            );
+          }
+        }
+
+        /*
+         * Images
+         */
+
+        for (const image of storedImages) {
           await itemImageRepository.create(
             item.id,
             image.uri,
             {
-              thumbnailUri:
-                image.thumbnailUri ?? null,
+              thumbnailUri: image.thumbnailUri,
             }
           );
         }
-      }
+
+        /*
+         * History
+         */
+
+        await itemHistoryRepository.create(
+          item.id,
+          "CREATED",
+          `Item "${item.name}" was created`
+        );
+
+        return item;
+      });
+
+    } catch (error) {
 
       /*
-       * History
+       * If storage or the database transaction fails,
+       * remove any files created during this operation.
        */
-      await itemHistoryRepository.create(
-        item.id,
-        "CREATED",
-        `Item "${item.name}" was created`
+
+      await Promise.allSettled(
+        storedImages.map(image =>
+          imageStorageService.deleteImage(
+            image.uri,
+            image.thumbnailUri
+          )
+        )
       );
 
-      return item;
-    });
+      throw error;
+    }
   }
 }
 
