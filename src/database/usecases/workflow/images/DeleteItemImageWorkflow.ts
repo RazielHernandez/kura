@@ -11,26 +11,17 @@ export class DeleteItemImageWorkflow {
       throw new Error("Image ID is required.");
     }
 
-    /*
-     * Retrieve image information before deletion.
-     */
-
+    // Retrieve image information before deletion.
     const image = await itemImageRepository.getById(id);
 
     if (!image) {
       throw new Error(`Image not found: ${id}`);
     }
 
-    /*
-     * Soft-delete the database record first.
-     */
-
+    // Soft-delete the database record.
     await deleteItemImageUseCase.execute(id);
 
-    /*
-     * Delete the original image and thumbnail.
-     */
-
+    // Remove the original image and thumbnail.
     await imageStorageService.deleteImage(
       image.uri,
       image.thumbnailUri

@@ -32,57 +32,73 @@ class ImageStorageService {
     });
   }
 
+  
   async storeImage(sourceUri: string): Promise<StoredImage> {
     if (!sourceUri.trim()) {
-      throw new Error("Image URI is required.");
+        throw new Error("Image URI is required.");
     }
 
     this.ensureDirectories();
 
     const id = this.generateId();
-
     const extension = this.getExtension(sourceUri);
 
     const originalFile = new File(
-      this.originalsDirectory,
-      `${id}.${extension}`
+        this.originalsDirectory,
+        `${id}.${extension}`
     );
 
     const thumbnailFile = new File(
-      this.thumbnailsDirectory,
-      `${id}.jpg`
+        this.thumbnailsDirectory,
+        `${id}.jpg`
     );
 
+    let generatedThumbnail: File | null = null;
+
     try {
-      const sourceFile = new File(sourceUri);
+        const sourceFile = new File(sourceUri);
 
-      if (!sourceFile.exists) {
+        if (!sourceFile.exists) {
         throw new Error("Selected image file does not exist.");
-      }
+        }
 
-      sourceFile.copy(originalFile);
+        // Copy the original image and wait for completion.
+        await sourceFile.copy(originalFile);
 
-      const thumbnail = await ImageManipulator.manipulateAsync(
+        if (!originalFile.exists) {
+        throw new Error("Original image could not be stored.");
+        }
+
+        const thumbnail = await ImageManipulator.manipulateAsync(
         originalFile.uri,
         [{ resize: { width: 400 } }],
         {
-          compress: 0.75,
-          format: ImageManipulator.SaveFormat.JPEG,
+            compress: 0.75,
+            format: ImageManipulator.SaveFormat.JPEG,
         }
-      );
+        );
 
-      const generatedThumbnail = new File(thumbnail.uri);
-      generatedThumbnail.copy(thumbnailFile);
+        generatedThumbnail = new File(thumbnail.uri);
 
-      return {
-        uri: originalFile.uri,
-        thumbnailUri: thumbnailFile.uri,
-      };
+        // Copy the thumbnail and wait for completion.
+        await generatedThumbnail.copy(thumbnailFile);
+
+        if (!thumbnailFile.exists) {
+            throw new Error("Thumbnail image could not be stored.");
+        }
+
+        return {
+            uri: originalFile.uri,
+            thumbnailUri: thumbnailFile.uri,
+        };
     } catch (error) {
-      this.deleteFileIfExists(originalFile);
-      this.deleteFileIfExists(thumbnailFile);
-
-      throw error;
+        this.deleteFileIfExists(originalFile);
+        this.deleteFileIfExists(thumbnailFile);
+        throw error;
+    } finally {
+        if (generatedThumbnail) {
+        this.deleteTemporaryFileIfExists(generatedThumbnail);
+        }
     }
   }
 
@@ -102,6 +118,43 @@ class ImageStorageService {
       );
     }
   }
+
+
+  
+  async listManagedImages(): Promise<{
+    originals: string[];
+    thumbnails: string[];
+  }> {
+    this.ensureDirectories();
+
+    return {
+        originals: this.originalsDirectory
+        .list()
+        .filter((entry): entry is File => entry instanceof File)
+        .map(file => file.uri),
+
+        thumbnails: this.thumbnailsDirectory
+        .list()
+        .filter((entry): entry is File => entry instanceof File)
+        .map(file => file.uri),
+    };
+  }
+
+
+  async deleteManagedImageFile(uri: string): Promise<void> {
+    if (uri.startsWith(this.originalsDirectory.uri)) {
+        this.deleteManagedFile(uri, this.originalsDirectory);
+        return;
+    }
+
+    if (uri.startsWith(this.thumbnailsDirectory.uri)) {
+        this.deleteManagedFile(uri, this.thumbnailsDirectory);
+        return;
+    }
+
+    throw new Error("Cannot delete a file outside Kura's image storage.");
+  }
+
 
   private deleteManagedFile(
     uri: string,
@@ -124,6 +177,16 @@ class ImageStorageService {
 
     this.deleteFileIfExists(new File(uri));
   }
+
+
+  private deleteTemporaryFileIfExists(file: File): void {
+    try {
+        this.deleteFileIfExists(file);
+    } catch {
+        // Temporary cleanup must not invalidate a successfully stored image.
+    }
+  }
+
 
   private deleteFileIfExists(file: File): void {
     if (file.exists) {

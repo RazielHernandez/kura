@@ -178,7 +178,6 @@ export class ItemImageRepository extends BaseRepository<ItemImage> {
     };
   }
 
-
   async reorderAll(
     itemId: string,
     imageIds: string[]
@@ -217,6 +216,30 @@ export class ItemImageRepository extends BaseRepository<ItemImage> {
         [sortOrder, timestamp, id, itemId]
       );
     }
+  }
+
+  async getAllByItemIdIncludingDeleted(
+    itemId: string
+  ): Promise<ItemImage[]> {
+    return this.query(
+      `
+      SELECT *
+      FROM item_images
+      WHERE itemId = ?
+      ORDER BY sortOrder ASC
+      `,
+      [itemId]
+    );
+  }
+  
+  async getAllIncludingDeleted(): Promise<ItemImage[]> {
+    return this.query(
+      `
+      SELECT *
+      FROM item_images
+      ORDER BY createdAt ASC
+      `
+    );
   }
 
   async deleteByItemId(

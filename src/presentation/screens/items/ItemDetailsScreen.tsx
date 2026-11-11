@@ -20,6 +20,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useItemDetailsStore } from "../../../database/stores/items/ItemDetailsStore";
 import { useItemStore } from "../../../database/stores/items/ItemStore";
 import { useItemImageStore } from "../../../database/stores/images/ItemImageStore";
+import { File } from "expo-file-system";
 
 interface ItemDetailsScreenProps {
   itemId: string;
@@ -200,6 +201,12 @@ export function ItemDetailsScreen({
             >
               {images.map((image) => {
                 const imageUri = image.thumbnailUri ?? image.uri;
+                // const imageUri = image.uri;
+
+                const originalFile = new File(image.uri);
+                const thumbnailFile = image.thumbnailUri
+                  ? new File(image.thumbnailUri)
+                  : null;
 
                 return (
                   <Pressable
@@ -444,16 +451,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "600",
   },
-
-  // section: {
-  //   marginTop: 24,
-  // },
-
-  // sectionTitle: {
-  //   fontSize: 18,
-  //   fontWeight: "600",
-  //   marginBottom: 12,
-  // },
 
   emptyText: {
     fontSize: 14,

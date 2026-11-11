@@ -49,6 +49,7 @@ export function EditItemScreen({
     loadImages,
     addImages,
     deleteImage,
+    reorderImages,
     clearImages,
   } = useItemImageStore();
 
@@ -172,6 +173,45 @@ export function EditItemScreen({
         },
       ]
     );
+  };
+
+  const handleMoveImage = async (
+    imageId: string,
+    direction: "left" | "right"
+  ) => {
+    const currentIndex = images.findIndex(
+      image => image.id === imageId
+    );
+
+    if (currentIndex === -1) return;
+
+    const targetIndex =
+      direction === "left"
+        ? currentIndex - 1
+        : currentIndex + 1;
+
+    if (targetIndex < 0 || targetIndex >= images.length) {
+      return;
+    }
+
+    const reorderedImages = [...images];
+
+    const [movedImage] = reorderedImages.splice(currentIndex, 1);
+
+    reorderedImages.splice(targetIndex, 0, movedImage);
+
+    const success = await reorderImages(
+      itemId,
+      reorderedImages.map(image => image.id)
+    );
+
+    if (!success) {
+      Alert.alert(
+        "Unable to reorder images",
+        useItemImageStore.getState().error ??
+          "Something went wrong."
+      );
+    }
   };
 
   const handleSave = async () => {
@@ -357,13 +397,15 @@ export function EditItemScreen({
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.imageList}
               >
-                {images.map((image) => (
+                {images.map((image, index) => (
                   <View key={image.id} style={styles.imagePreviewContainer}>
                     <Image
                       source={{ uri: image.thumbnailUri ?? image.uri }}
+                      // source={{ uri: image.uri }}
                       style={styles.imagePreview}
                     />
 
+                    {/* Delete */}
                     <Pressable
                       style={styles.removeImageButton}
                       onPress={() => handleDeleteExistingImage(image.id)}
@@ -371,6 +413,34 @@ export function EditItemScreen({
                     >
                       <Text style={styles.removeImageText}>×</Text>
                     </Pressable>
+
+                    {/* Reordering */}
+                    <View style={styles.imageReorderControls}>
+                      <Pressable
+                        style={[
+                          styles.imageMoveButton,
+                          index === 0 && styles.imageMoveButtonDisabled,
+                        ]}
+                        disabled={index === 0 || isSavingImages}
+                        onPress={() => handleMoveImage(image.id, "left")}
+                      >
+                        <Text style={styles.imageMoveText}>←</Text>
+                      </Pressable>
+
+                      <Pressable
+                        style={[
+                          styles.imageMoveButton,
+                          index === images.length - 1 &&
+                            styles.imageMoveButtonDisabled,
+                        ]}
+                        disabled={
+                          index === images.length - 1 || isSavingImages
+                        }
+                        onPress={() => handleMoveImage(image.id, "right")}
+                      >
+                        <Text style={styles.imageMoveText}>→</Text>
+                      </Pressable>
+                    </View>
                   </View>
                 ))}
 
@@ -380,6 +450,10 @@ export function EditItemScreen({
                       source={{ uri: image.uri }}
                       style={styles.imagePreview}
                     />
+
+                    <View style={styles.newImageBadge}>
+                      <Text style={styles.newImageBadgeText}>NEW</Text>
+                    </View>
 
                     <Pressable
                       style={styles.removeImageButton}
@@ -613,13 +687,13 @@ const styles = StyleSheet.create({
 
   imagePreviewContainer: {
     width: 110,
-    height: 110,
+    height: 150,
     position: "relative",
   },
 
   imagePreview: {
-    width: "100%",
-    height: "100%",
+    width: 110,
+    height: 110,
     borderRadius: 12,
     backgroundColor: "#E5E7EB",
   },
@@ -647,5 +721,48 @@ const styles = StyleSheet.create({
     color: "#DC2626",
     fontSize: 13,
     marginTop: 12,
+  },
+
+  newImageBadge: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    backgroundColor: "#2563EB",
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+
+  newImageBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+
+  imageReorderControls: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 6,
+    gap: 6,
+  },
+
+  imageMoveButton: {
+    flex: 1,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: "#DBEAFE",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  imageMoveButtonDisabled: {
+    opacity: 0.3,
+  },
+
+  imageMoveText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#2563EB",
   },
 });

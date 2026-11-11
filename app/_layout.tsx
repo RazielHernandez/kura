@@ -10,6 +10,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { databaseService } from "../src/database/DatabaseService";
+import { imageStorageCleanupService } from "../src/database/services/ImageStorageCleanupService";
 
 type AppStatus = "loading" | "ready" | "error";
 
@@ -22,7 +23,17 @@ export default function RootLayout() {
       setStatus("loading");
       setError(null);
 
+      // Initialize database and run migrations.
       await databaseService.initialize();
+
+      // Reconcile image files with database records.
+      try {
+        const result = await imageStorageCleanupService.cleanup();
+
+        console.log("Image cleanup completed:", result);
+      } catch (cleanupError) {
+        console.warn("Image cleanup could not be completed:", cleanupError);
+      }
 
       setStatus("ready");
     } catch (err) {
