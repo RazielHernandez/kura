@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import { ItemNotesScreen } from "../../../../../src/presentation/screens/notes/ItemNotesScreen";
+import { ItemNotesScreen } from "../../../../../../src/presentation/screens/notes/ItemNotesScreen";
 
 export default function ItemNotesRoute() {
   const { itemId } = useLocalSearchParams<{

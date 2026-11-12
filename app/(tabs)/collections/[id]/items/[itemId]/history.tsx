@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import { ItemHistoryScreen } from "../../../../../src/presentation/screens/items/ItemHistoryScreen";
+import { ItemHistoryScreen } from "../../../../../../src/presentation/screens/items/ItemHistoryScreen";
 
 export default function ItemHistoryRoute() {
   const { itemId } = useLocalSearchParams<{

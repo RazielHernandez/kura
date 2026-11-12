@@ -119,7 +119,58 @@ class ImageStorageService {
     }
   }
 
+  async regenerateThumbnail(
+    originalUri: string
+  ): Promise<string> {
+    if (!originalUri.trim()) {
+        throw new Error("Original image URI is required.");
+    }
 
+    this.ensureDirectories();
+
+    const originalFile = new File(originalUri);
+
+    if (!originalFile.exists) {
+        throw new Error("Original image file does not exist.");
+    }
+
+    const id = this.generateId();
+
+    const thumbnailFile = new File(
+        this.thumbnailsDirectory,
+        `${id}.jpg`
+    );
+
+    let generatedThumbnail: File | null = null;
+
+    try {
+        const thumbnail = await ImageManipulator.manipulateAsync(
+        originalFile.uri,
+        [{ resize: { width: 400 } }],
+        {
+            compress: 0.75,
+            format: ImageManipulator.SaveFormat.JPEG,
+        }
+        );
+
+        generatedThumbnail = new File(thumbnail.uri);
+
+        await generatedThumbnail.copy(thumbnailFile);
+
+        if (!thumbnailFile.exists) {
+        throw new Error("Thumbnail could not be stored.");
+        }
+
+        return thumbnailFile.uri;
+    } catch (error) {
+        this.deleteFileIfExists(thumbnailFile);
+        throw error;
+    } finally {
+        if (generatedThumbnail) {
+        this.deleteTemporaryFileIfExists(generatedThumbnail);
+        }
+    }
+ }
   
   async listManagedImages(): Promise<{
     originals: string[];

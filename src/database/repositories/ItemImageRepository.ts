@@ -259,6 +259,25 @@ export class ItemImageRepository extends BaseRepository<ItemImage> {
       [timestamp, timestamp, itemId]
     );
   }
+
+  async updateThumbnailUri(
+    imageId: string,
+    thumbnailUri: string
+  ): Promise<void> {
+    await this.execute(
+      `
+      UPDATE item_images
+      SET thumbnailUri = ?, updatedAt = ?
+      WHERE id = ?
+        AND deletedAt IS NULL
+      `,
+      [
+        thumbnailUri,
+        new Date().toISOString(),
+        imageId,
+      ]
+    );
+  }
 }
 
 export const itemImageRepository =

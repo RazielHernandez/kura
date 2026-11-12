@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import { EditItemScreen } from "../../../../../src/presentation/screens/items/EditItemScreen";
+import { EditItemScreen } from "../../../../../../src/presentation/screens/items/EditItemScreen";
 
 
 export default function EditItemRoute() {

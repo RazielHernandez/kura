@@ -1,8 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import {
-    Alert,
-    Button,
-} from "react-native";
+import { Alert } from "react-native";
 
 import {
   View,
@@ -20,7 +17,8 @@ import { router, useFocusEffect } from "expo-router";
 import { useItemDetailsStore } from "../../../database/stores/items/ItemDetailsStore";
 import { useItemStore } from "../../../database/stores/items/ItemStore";
 import { useItemImageStore } from "../../../database/stores/images/ItemImageStore";
-import { File } from "expo-file-system";
+import { ItemGalleryImage } from "../../components/images/ItemGalleryImage";
+import { ItemImagePreview } from "../../components/images/ItemImagePreview";
 
 interface ItemDetailsScreenProps {
   itemId: string;
@@ -199,7 +197,7 @@ export function ItemDetailsScreen({
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.imageGallery}
             >
-              {images.map((image) => {
+              {/* {images.map((image) => {
                 const imageUri = image.thumbnailUri ?? image.uri;
                 // const imageUri = image.uri;
 
@@ -220,7 +218,15 @@ export function ItemDetailsScreen({
                     />
                   </Pressable>
                 );
-              })}
+              })} */}
+              {images.map((image) => (
+                <ItemGalleryImage
+                  key={image.id}
+                  thumbnailUri={image.thumbnailUri}
+                  originalUri={image.uri}
+                  onPress={() => setSelectedPreviewUri(image.uri)}
+                />
+              ))}
             </ScrollView>
           )}
         </View>
@@ -308,7 +314,7 @@ export function ItemDetailsScreen({
         </View>
       </ScrollView>
 
-      <Modal
+      {/* <Modal
         visible={selectedPreviewUri !== null}
         transparent
         animationType="fade"
@@ -333,6 +339,20 @@ export function ItemDetailsScreen({
             <Text style={styles.closePreviewText}>✕</Text>
           </Pressable>
         </Pressable>
+      </Modal> */}
+
+      <Modal
+        visible={selectedPreviewUri !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedPreviewUri(null)}
+      >
+        {selectedPreviewUri && (
+          <ItemImagePreview
+            uri={selectedPreviewUri}
+            onClose={() => setSelectedPreviewUri(null)}
+          />
+        )}
       </Modal>
     </SafeAreaView>
     
