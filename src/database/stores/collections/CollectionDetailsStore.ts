@@ -21,55 +21,73 @@ interface CollectionDetailsState {
 }
 
 export const useCollectionDetailsStore =
-  create<CollectionDetailsState>((set) => ({
-    collection: null,
-    fields: [],
-    items: [],
+  create<CollectionDetailsState>((set) => {
+    let latestRequestId = 0;
 
-    isLoading: false,
-    error: null,
+    return {
+      collection: null,
+      fields: [],
+      items: [],
 
-    loadDetails: async (collectionId) => {
-      set({
-        isLoading: true,
-        error: null,
-      });
+      isLoading: false,
+      error: null,
 
-      try {
-        const [collection, fields, items] = await Promise.all([
-          collectionRepository.getById(collectionId),
-          getCollectionFieldsUseCase.execute(collectionId),
-          itemRepository.getByCollectionId(collectionId),
-        ]);
-
-        if (!collection) {
-          throw new Error("Collection not found.");
-        }
+      loadDetails: async (collectionId) => {
+        const requestId = ++latestRequestId;
 
         set({
-          collection,
-          fields,
-          items,
+          isLoading: true,
+          error: null,
+        });
+
+        try {
+          const [collection, fields, items] = await Promise.all([
+            collectionRepository.getById(collectionId),
+            getCollectionFieldsUseCase.execute(collectionId),
+            itemRepository.getByCollectionId(collectionId),
+          ]);
+
+          if (requestId !== latestRequestId) {
+            return;
+          }
+
+          if (!collection) {
+            throw new Error("Collection not found.");
+          }
+
+          set({
+            collection,
+            fields,
+            items,
+            isLoading: false,
+            error: null,
+          });
+        } catch (error) {
+          if (requestId !== latestRequestId) {
+            return;
+          }
+
+          set({
+            isLoading: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unable to load collection details.",
+          });
+        }
+      },
+
+      clearDetails: () => {
+        // Invalidate pending requests.
+        latestRequestId += 1;
+
+        set({
+          collection: null,
+          fields: [],
+          items: [],
           isLoading: false,
           error: null,
         });
-      } catch (error) {
-        set({
-          isLoading: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Unable to load collection details.",
-        });
-      }
-    },
-
-    clearDetails: () =>
-      set({
-        collection: null,
-        fields: [],
-        items: [],
-        isLoading: false,
-        error: null,
-      }),
-  }));
+      },
+    };
+  });

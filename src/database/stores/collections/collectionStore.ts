@@ -29,6 +29,8 @@ interface CollectionStoreState {
   restoreCollection: (id: string) => Promise<void>;
 
   clearError: () => void;
+
+  reset: () => void;
 }
 
 function getErrorMessage(
@@ -75,6 +77,19 @@ export const useCollectionStore = create<CollectionStoreState>(
 
       set({
         isSaving: pendingMutations > 0,
+      });
+    };
+
+    const reset = () => {
+      // Invalidate any collection load currently in progress.
+      latestLoadRequestId += 1;
+      dataVersion += 1;
+
+      set({
+        collections: [],
+        isLoading: false,
+        isSaving: pendingMutations > 0,
+        error: null,
       });
     };
 
@@ -248,6 +263,9 @@ export const useCollectionStore = create<CollectionStoreState>(
       },
 
       clearError: () => set({ error: null }),
+
+      reset,
+      
     };
   }
 );
