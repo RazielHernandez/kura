@@ -1,13 +1,17 @@
+
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+
+const ACTIVE_COLOR = "#2563EB";
+const INACTIVE_COLOR = "#8E8E93";
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#2563EB",
-        tabBarInactiveTintColor: "#8E8E93",
+        tabBarActiveTintColor: ACTIVE_COLOR,
+        tabBarInactiveTintColor: INACTIVE_COLOR,
       }}
     >
       <Tabs.Screen
@@ -22,11 +26,11 @@ export default function TabsLayout() {
         options={{
           title: "Collections",
           tabBarLabel: "Collections",
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ focused, size }) => (
             <Ionicons
               name="albums-outline"
               size={size}
-              color={color}
+              color={focused ? ACTIVE_COLOR : INACTIVE_COLOR}
             />
           ),
         }}
@@ -37,11 +41,11 @@ export default function TabsLayout() {
         options={{
           title: "Settings",
           tabBarLabel: "Settings",
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ focused, size }) => (
             <Ionicons
               name="settings-outline"
               size={size}
-              color={color}
+              color={focused ? ACTIVE_COLOR : INACTIVE_COLOR}
             />
           ),
         }}
