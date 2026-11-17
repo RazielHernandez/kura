@@ -46,13 +46,51 @@ export class UpdateItemWorkflow {
     input: UpdateItemWorkflowInput
   ): Promise<Item> {
 
+    // /*
+    //  * Load existing values and merge supplied changes.
+    //  */
+
+    // const currentValues =
+    //   await itemValueRepository.getByItemId(input.itemId);
+
+    // const incomingValues = input.values ?? [];
+    // const fieldIds = incomingValues.map(value => value.fieldId);
+
+    // if (new Set(fieldIds).size !== fieldIds.length) {
+    //   throw new Error(
+    //     "An item cannot have multiple values for the same field"
+    //   );
+    // }
+
+    // if (input.tagIds !== undefined) {
+    //   if (new Set(input.tagIds).size !== input.tagIds.length) {
+    //     throw new Error("Duplicate tag IDs are not allowed");
+    //   }
+    // }
+
+    // const valuesByFieldId = new Map<string, string | null>(
+    //   currentValues.map(value => [
+    //     value.fieldId,
+    //     value.value,
+    //   ])
+    // );
+
+    // for (const value of incomingValues) {
+    //   valuesByFieldId.set(value.fieldId, value.value);
+    // }
+
+    // const finalValues = Array.from(
+    //   valuesByFieldId,
+    //   ([fieldId, value]) => ({
+    //     fieldId,
+    //     value,
+    //   })
+    // );
     /*
-     * Load existing values and merge supplied changes.
-     */
+ * Load existing values and merge supplied changes.
+ */
 
-    const currentValues =
-      await itemValueRepository.getByItemId(input.itemId);
-
+    const currentValues = await itemValueRepository.getByItemId(input.itemId);
     const incomingValues = input.values ?? [];
     const fieldIds = incomingValues.map(value => value.fieldId);
 
@@ -67,6 +105,10 @@ export class UpdateItemWorkflow {
         throw new Error("Duplicate tag IDs are not allowed");
       }
     }
+
+    /*
+    * Merge existing and incoming values.
+    */
 
     const valuesByFieldId = new Map<string, string | null>(
       currentValues.map(value => [
@@ -120,19 +162,38 @@ export class UpdateItemWorkflow {
          * Validate field ownership.
          */
 
+        // await validateItemFieldsUseCase.execute({
+        //   collectionId: existing.collectionId,
+        //   fieldIds: finalValues.map(value => value.fieldId),
+        // });
+
+        /*
+        * Validate only supplied fields.
+        * Historical fields are not editable and are not validated here.
+        */
+
         await validateItemFieldsUseCase.execute({
           collectionId: existing.collectionId,
-          fieldIds: finalValues.map(value => value.fieldId),
+          fieldIds: incomingValues.map(value => value.fieldId),
+        });
+
+        /*
+        * Validate required active fields.
+        */
+
+        await validateRequiredItemFieldsUseCase.execute({
+          collectionId: existing.collectionId,
+          values: finalValues,
         });
 
         /*
          * Validate required fields.
          */
 
-        await validateRequiredItemFieldsUseCase.execute({
-          collectionId: existing.collectionId,
-          values: finalValues,
-        });
+        // await validateRequiredItemFieldsUseCase.execute({
+        //   collectionId: existing.collectionId,
+        //   values: finalValues,
+        // });
 
         /*
          * Validate tags.

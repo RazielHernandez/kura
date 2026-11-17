@@ -2,6 +2,8 @@ import { BaseRepository } from "./BaseRepository";
 import { ItemValue } from "../models/ItemValue";
 import { generateId } from "../utils/UUID";
 import { now } from "../utils/DateUtils";
+import { HistoricalItemField } from "../models/HistoricalItemField";
+import { FieldType } from "../models/CollectionField";
 
 export class ItemValueRepository extends BaseRepository<ItemValue> {
   constructor() {
@@ -136,6 +138,85 @@ export class ItemValueRepository extends BaseRepository<ItemValue> {
       `,
       [fieldId]
     );
+  }
+
+  async getNonEmptyByFieldIdForActiveItems(
+    fieldId: string
+  ): Promise<ItemValue[]> {
+    return this.query(
+      `
+      SELECT item_values.*
+      FROM item_values
+      INNER JOIN items
+        ON items.id = item_values.itemId
+      WHERE item_values.fieldId = ?
+        AND item_values.deletedAt IS NULL
+        AND items.deletedAt IS NULL
+        AND item_values.value IS NOT NULL
+        AND TRIM(item_values.value) != ''
+      ORDER BY item_values.createdAt ASC
+      `,
+      [fieldId]
+    );
+  }
+  
+  async getHistoricalFieldsByItemId(
+    itemId: string
+  ): Promise<HistoricalItemField[]> {
+    type HistoricalFieldRow = {
+      field_id: string;
+      field_collectionId: string;
+      field_name: string;
+      field_fieldType: FieldType;
+      field_required: number;
+      field_sortOrder: number;
+      field_createdAt: string;
+      field_updatedAt: string;
+      field_deletedAt: string | null;
+      item_value: string | null;
+    };
+
+    const rows = await this.queryRaw<HistoricalFieldRow>(
+      `
+      SELECT
+        cf.id AS field_id,
+        cf.collectionId AS field_collectionId,
+        cf.name AS field_name,
+        cf.fieldType AS field_fieldType,
+        cf.required AS field_required,
+        cf.sortOrder AS field_sortOrder,
+        cf.createdAt AS field_createdAt,
+        cf.updatedAt AS field_updatedAt,
+        cf.deletedAt AS field_deletedAt,
+        iv.value AS item_value
+      FROM item_values iv
+      INNER JOIN collection_fields cf
+        ON cf.id = iv.fieldId
+      INNER JOIN items i
+        ON i.id = iv.itemId
+      WHERE iv.itemId = ?
+        AND iv.deletedAt IS NULL
+        AND cf.deletedAt IS NOT NULL
+        AND i.deletedAt IS NULL
+      ORDER BY cf.sortOrder ASC
+      `,
+      [itemId]
+    );
+
+    return rows.map(row => ({
+      field: {
+        id: row.field_id,
+        collectionId: row.field_collectionId,
+        name: row.field_name,
+        fieldType: row.field_fieldType,
+        required: Boolean(row.field_required),
+        sortOrder: row.field_sortOrder,
+        createdAt: row.field_createdAt,
+        updatedAt: row.field_updatedAt,
+        deletedAt: row.field_deletedAt,
+      },
+      value: row.item_value,
+    }));
   }
 
   async getByItemAndField(

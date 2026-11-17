@@ -26,9 +26,14 @@ export function DeletedItemsScreen({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const restoreItem = useItemStore(
     (state) => state.restoreItem
+  );
+
+  const permanentlyDeleteItem = useItemStore(
+    (state) => state.permanentlyDeleteItem
   );
 
   const storeError = useItemStore(
@@ -91,6 +96,37 @@ export function DeletedItemsScreen({
     );
   };
 
+  const handlePermanentDelete = (item: Item) => {
+    Alert.alert(
+      "Permanently Delete Item",
+      `Are you sure you want to permanently delete "${item.name}"?\n\nThis action cannot be undone. All associated values, images, notes, tags, history, and list relationships will be deleted.`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Permanently Delete",
+          style: "destructive",
+          onPress: async () => {
+            setDeletingId(item.id);
+            clearStoreError();
+
+            try {
+              const success = await permanentlyDeleteItem(item.id);
+
+              if (success) {
+                await loadDeletedItems();
+              }
+            } finally {
+              setDeletingId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -141,6 +177,37 @@ export function DeletedItemsScreen({
           </Text>
 
           {items.map((item) => (
+            // <View key={item.id} style={styles.itemCard}>
+            //   <View style={styles.itemInfo}>
+            //     <Text style={styles.itemName}>
+            //       {item.name}
+            //     </Text>
+
+            //     {item.description && (
+            //       <Text style={styles.itemDescription}>
+            //         {item.description}
+            //       </Text>
+            //     )}
+            //   </View>
+
+            //   <Pressable
+            //     style={[
+            //       styles.restoreButton,
+            //       restoringId === item.id && styles.disabledButton,
+            //     ]}
+            //     disabled={restoringId !== null}
+            //     onPress={() => handleRestore(item)}
+            //   >
+            //     {restoringId === item.id ? (
+            //       <ActivityIndicator color="#2563EB" />
+            //     ) : (
+            //       <Text style={styles.restoreButtonText}>
+            //         Restore
+            //       </Text>
+            //     )}
+            //   </Pressable>
+            // </View>
+
             <View key={item.id} style={styles.itemCard}>
               <View style={styles.itemInfo}>
                 <Text style={styles.itemName}>
@@ -154,22 +221,47 @@ export function DeletedItemsScreen({
                 )}
               </View>
 
-              <Pressable
-                style={[
-                  styles.restoreButton,
-                  restoringId === item.id && styles.disabledButton,
-                ]}
-                disabled={restoringId !== null}
-                onPress={() => handleRestore(item)}
-              >
-                {restoringId === item.id ? (
-                  <ActivityIndicator color="#2563EB" />
-                ) : (
-                  <Text style={styles.restoreButtonText}>
-                    Restore
-                  </Text>
-                )}
-              </Pressable>
+              <View style={styles.itemActions}>
+                <Pressable
+                  style={[
+                    styles.restoreButton,
+                    (restoringId !== null || deletingId !== null) &&
+                      styles.disabledButton,
+                  ]}
+                  disabled={
+                    restoringId !== null || deletingId !== null
+                  }
+                  onPress={() => handleRestore(item)}
+                >
+                  {restoringId === item.id ? (
+                    <ActivityIndicator color="#2563EB" />
+                  ) : (
+                    <Text style={styles.restoreButtonText}>
+                      Restore
+                    </Text>
+                  )}
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.permanentDeleteButton,
+                    (restoringId !== null || deletingId !== null) &&
+                      styles.disabledButton,
+                  ]}
+                  disabled={
+                    restoringId !== null || deletingId !== null
+                  }
+                  onPress={() => handlePermanentDelete(item)}
+                >
+                  {deletingId === item.id ? (
+                    <ActivityIndicator color="#DC2626" />
+                  ) : (
+                    <Text style={styles.permanentDeleteButtonText}>
+                      Delete
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
             </View>
           ))}
         </ScrollView>
@@ -294,5 +386,24 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: "#FFFFFF",
     fontWeight: "600",
+  },
+
+  itemActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  permanentDeleteButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#FEF2F2",
+  },
+
+  permanentDeleteButtonText: {
+    color: "#DC2626",
+    fontWeight: "600",
+    fontSize: 13,
   },
 });

@@ -2,10 +2,14 @@ import { create } from "zustand";
 
 import { Collection } from "../../models/Collection";
 import { createCollectionWorkflow, CreateCollectionWorkflowInput } from "../../usecases/workflow/collections/CreateCollectionWorkflow";
-import { updateCollectionWorkflow, UpdateCollectionWorkflowInput } from "../../usecases/workflow/collections/UpdateCollectionWorkflow";
 import { getCollectionsUseCase } from "../../usecases/collections/GetCollectionsUseCase";
 import { deleteCollectionWorkflow } from "../../usecases/workflow/collections/DeleteCollectionWorkflow";
 import { restoreCollectionWorkflow } from "../../usecases/workflow/collections/RestoreCollectionWorkflow";
+
+import {
+  updateCollectionWithFieldsWorkflow,
+  UpdateCollectionWithFieldsWorkflowInput,
+} from "../../usecases/workflow/collections/UpdateCollectionWithFieldsWorkflow";
 
 
 interface CollectionStoreState {
@@ -21,7 +25,7 @@ interface CollectionStoreState {
   ) => Promise<Collection>;
 
   updateCollection: (
-    input: UpdateCollectionWorkflowInput
+    input: UpdateCollectionWithFieldsWorkflowInput
   ) => Promise<Collection>;
 
   deleteCollection: (id: string) => Promise<void>;
@@ -170,13 +174,13 @@ export const useCollectionStore = create<CollectionStoreState>(
           finishMutation();
         }
       },
-
+      
       updateCollection: async (input) => {
         beginMutation();
 
         try {
           const updated =
-            await updateCollectionWorkflow.execute(input);
+            await updateCollectionWithFieldsWorkflow.execute(input);
 
           commitMutation();
 

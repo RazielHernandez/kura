@@ -40,6 +40,10 @@ import {
   SetItemTagsWorkflowInput,
 } from "../../usecases/workflow/tags/SetItemTagsWorkflow";
 
+import { 
+  permanentlyDeleteItemWorkflow 
+} from "../../usecases/workflow/items/PermanentlyDeleteItemWorkflow";
+
 interface ItemState {
   isSaving: boolean;
   error: string | null;
@@ -76,6 +80,8 @@ interface ItemState {
   ) => Promise<boolean>;
 
   clearError: () => void;
+
+  permanentlyDeleteItem: (itemId: string) => Promise<boolean>;
 }
 
 function getErrorMessage(
@@ -210,5 +216,11 @@ export const useItemStore = create<ItemState>((set) => {
       ),
 
     clearError: () => set({ error: null }),
+
+    permanentlyDeleteItem: (itemId) =>
+      runAction(
+        () => permanentlyDeleteItemWorkflow.execute(itemId),
+        "Unable to permanently delete item."
+      ),
   };
 });

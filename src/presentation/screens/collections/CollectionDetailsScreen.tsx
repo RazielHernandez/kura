@@ -1,17 +1,17 @@
-
-import { useEffect } from "react";
-import { useFocusEffect } from "expo-router";
 import React, { useCallback } from "react";
+import { useFocusEffect, router } from "expo-router";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { router } from "expo-router";
+
 import { useCollectionDetailsStore } from "../../../database/stores/collections/CollectionDetailsStore";
+import { useCollectionStore } from "../../../database/stores/collections/collectionStore";
 
 interface CollectionDetailsScreenProps {
   collectionId: string;
@@ -48,11 +48,53 @@ export function CollectionDetailsScreen({
     (state) => state.clearDetails
   );
 
+  const deleteCollection = useCollectionStore(
+    (state) => state.deleteCollection
+  );
+
+  const clearStoreError = useCollectionStore(
+    (state) => state.clearError
+  );
+
   useFocusEffect(
     useCallback(() => {
       loadDetails(collectionId);
     }, [collectionId])
   );
+
+  const handleDeleteCollection = () => {
+    Alert.alert(
+      "Delete Collection",
+      `Are you sure you want to delete "${collection?.name}"?\n\nThe collection and its items will be moved to Deleted Collections. You can restore them later.`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            clearStoreError();
+
+            try {
+              await deleteCollection(collectionId);
+
+              clearDetails();
+              router.back();
+            } catch (error) {
+              Alert.alert(
+                "Unable to Delete Collection",
+                error instanceof Error
+                  ? error.message
+                  : "Something went wrong while deleting the collection."
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
 
   if (isLoading) {
     return (
@@ -97,13 +139,21 @@ export function CollectionDetailsScreen({
           <Text style={styles.backButton}>‹ Back</Text>
         </Pressable>
 
-        <Pressable
-          onPress={() => {
-            
-          }}
-        >
-          <Text style={styles.headerAction}>Edit</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            onPress={handleDeleteCollection}
+          >
+            <Text style={styles.deleteAction}>Delete</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => {
+              router.push(`/collections/${collectionId}/edit`);
+            }}
+          >
+            <Text style={styles.headerAction}>Edit</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -567,6 +617,17 @@ const styles = StyleSheet.create({
 
   deletedItemsText: {
     color: "#64748B",
+    fontWeight: "600",
+  },
+
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 20,
+  },
+
+  deleteAction: {
+    color: "#DC2626",
     fontWeight: "600",
   },
 });

@@ -145,6 +145,20 @@ export class CollectionFieldRepository
     );
   }
 
+  async getByCollectionIdIncludingDeleted(
+    collectionId: string
+  ): Promise<CollectionField[]> {
+    return this.query(
+      `
+      SELECT *
+      FROM collection_fields
+      WHERE collectionId = ?
+      ORDER BY sortOrder ASC
+      `,
+      [collectionId]
+    );
+  }
+
   async search(
     collectionId: string,
     query: string

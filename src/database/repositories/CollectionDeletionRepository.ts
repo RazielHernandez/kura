@@ -131,6 +131,55 @@ export class CollectionDeletionRepository {
       [now(), id]
     );
   }
+
+  async removeItemReferences(input: {
+    collectionId: string;
+    itemId: string;
+    itemValueIds: string[];
+    itemImageIds: string[];
+    itemNoteIds: string[];
+  }): Promise<void> {
+    const deletion = await this.getActiveByCollectionId(
+      input.collectionId
+    );
+
+    if (!deletion) return;
+
+    const updatedItemIds = deletion.itemIds.filter(
+      id => id !== input.itemId
+    );
+
+    const updatedItemValueIds = deletion.itemValueIds.filter(
+      id => !input.itemValueIds.includes(id)
+    );
+
+    const updatedItemImageIds = deletion.itemImageIds.filter(
+      id => !input.itemImageIds.includes(id)
+    );
+
+    const updatedItemNoteIds = deletion.itemNoteIds.filter(
+      id => !input.itemNoteIds.includes(id)
+    );
+
+    await databaseService.execute(
+      `
+      UPDATE collection_deletions
+      SET itemIds = ?,
+          itemValueIds = ?,
+          itemImageIds = ?,
+          itemNoteIds = ?
+      WHERE id = ?
+        AND restoredAt IS NULL
+      `,
+      [
+        JSON.stringify(updatedItemIds),
+        JSON.stringify(updatedItemValueIds),
+        JSON.stringify(updatedItemImageIds),
+        JSON.stringify(updatedItemNoteIds),
+        deletion.id,
+      ]
+    );
+  }
 }
 
 export const collectionDeletionRepository =

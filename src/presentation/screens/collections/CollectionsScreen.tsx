@@ -44,12 +44,21 @@ export function CollectionsScreen() {
           </Text>
         </View>
 
-        <Pressable
-          style={styles.addButton}
-          onPress={() => router.push("/collections/new")}
-        >
-          <Text style={styles.addButtonText}>+</Text>
-        </Pressable>
+       <View style={styles.headerActions}>
+          <Pressable
+            style={styles.deletedButton}
+            onPress={() => router.push("/collections/deleted")}
+          >
+            <Text style={styles.deletedButtonText}>Deleted</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.addButton}
+            onPress={() => router.push("/collections/new")}
+          >
+            <Text style={styles.addButtonText}>+</Text>
+          </Pressable>
+        </View>
       </View>
 
       {isLoading && collections.length === 0 ? (
@@ -186,5 +195,24 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 24,
     paddingBottom: 32,
+  },
+
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  deletedButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#E2E8F0",
+  },
+
+  deletedButtonText: {
+    color: "#475569",
+    fontWeight: "600",
+    fontSize: 13,
   },
 });

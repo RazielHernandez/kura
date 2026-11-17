@@ -169,6 +169,17 @@ export class CollectionRepository extends BaseRepository<Collection> {
     return (result?.count ?? 0) > 0;
   }
 
+  async getDeletedOrdered(): Promise<Collection[]> {
+    return this.query(
+      `
+      SELECT *
+      FROM collections
+      WHERE deletedAt IS NOT NULL
+      ORDER BY deletedAt DESC, name ASC
+      `
+    );
+  }
+
   async getAllOrdered(): Promise<Collection[]> {
     return this.query(
       `

@@ -31,10 +31,10 @@ export function ItemDetailsScreen({
     item,
     fields,
     values,
+    historicalFields,
     isLoading,
     error,
     loadDetails,
-    clearDetails,
   } = useItemDetailsStore();
 
   const {
@@ -257,6 +257,41 @@ export function ItemDetailsScreen({
                 </View>
               );
             })}
+          </View>
+        )}
+
+        {/* Historical fields */}
+        {historicalFields.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.historicalHeader}>
+              <Text style={styles.sectionTitle}>
+                Historical Fields
+              </Text>
+
+              <Text style={styles.historicalBadge}>
+                Read only
+              </Text>
+            </View>
+
+            <Text style={styles.historicalDescription}>
+              These fields were removed from the collection.
+              Their original values have been preserved.
+            </Text>
+
+            {historicalFields.map(({ field, value }) => (
+              <View
+                key={field.id}
+                style={styles.fieldRow}
+              >
+                <Text style={styles.fieldName}>
+                  {field.name}
+                </Text>
+
+                <Text style={styles.fieldValue}>
+                  {formatValue(field.fieldType, value)}
+                </Text>
+              </View>
+            ))}
           </View>
         )}
 
@@ -516,5 +551,28 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 20,
     fontWeight: "600",
+  },
+
+  historicalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  historicalBadge: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#92400E",
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+
+  historicalDescription: {
+    fontSize: 13,
+    color: "#6B7280",
+    lineHeight: 19,
+    marginBottom: 12,
   },
 });

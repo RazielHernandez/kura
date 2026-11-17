@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { Item } from "../../models/Item";
 import { CollectionField } from "../../models/CollectionField";
 import { ItemValue } from "../../models/ItemValue";
+import { HistoricalItemField } from "../../models/HistoricalItemField";
 
 import { itemRepository } from "../../repositories/ItemRepository";
 import { collectionFieldRepository } from "../../repositories/CollectionFieldRepository";
@@ -12,6 +13,7 @@ interface ItemDetailsState {
   item: Item | null;
   fields: CollectionField[];
   values: ItemValue[];
+  historicalFields: HistoricalItemField[];
 
   isLoading: boolean;
   error: string | null;
@@ -28,6 +30,7 @@ export const useItemDetailsStore =
       item: null,
       fields: [],
       values: [],
+      historicalFields: [],
 
       isLoading: false,
       error: null,
@@ -47,11 +50,18 @@ export const useItemDetailsStore =
             throw new Error("Item not found.");
           }
 
-          const [fields, values] = await Promise.all([
+          const [
+            fields,
+            values,
+            historicalFields,
+          ] = await Promise.all([
             collectionFieldRepository.getByCollectionId(
               item.collectionId
             ),
             itemValueRepository.getByItemId(item.id),
+            itemValueRepository.getHistoricalFieldsByItemId(
+              item.id
+            ),
           ]);
 
           // Ignore results from an outdated request.
@@ -63,6 +73,7 @@ export const useItemDetailsStore =
             item,
             fields,
             values,
+            historicalFields,
             isLoading: false,
             error: null,
           });
@@ -88,6 +99,7 @@ export const useItemDetailsStore =
           item: null,
           fields: [],
           values: [],
+          historicalFields: [],
           isLoading: false,
           error: null,
         });
