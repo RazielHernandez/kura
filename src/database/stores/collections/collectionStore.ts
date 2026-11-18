@@ -10,6 +10,7 @@ import {
   updateCollectionWithFieldsWorkflow,
   UpdateCollectionWithFieldsWorkflowInput,
 } from "../../usecases/workflow/collections/UpdateCollectionWithFieldsWorkflow";
+import { permanentlyDeleteCollectionWorkflow } from "../../usecases/workflow/collections/PermanentlyDeleteCollectionWorkflow";
 
 
 interface CollectionStoreState {
@@ -31,6 +32,8 @@ interface CollectionStoreState {
   deleteCollection: (id: string) => Promise<void>;
 
   restoreCollection: (id: string) => Promise<void>;
+
+  permanentlyDeleteCollection(id: string): Promise<boolean>;
 
   clearError: () => void;
 
@@ -227,6 +230,29 @@ export const useCollectionStore = create<CollectionStoreState>(
             error: getErrorMessage(
               error,
               "Failed to delete collection."
+            ),
+          });
+
+          throw error;
+        } finally {
+          finishMutation();
+        }
+      },
+
+      permanentlyDeleteCollection: async (id) => {
+        beginMutation();
+
+        try {
+          await permanentlyDeleteCollectionWorkflow.execute(id);
+
+          commitMutation();
+
+          return true;
+        } catch (error) {
+          set({
+            error: getErrorMessage(
+              error,
+              "Failed to permanently delete collection."
             ),
           });
 

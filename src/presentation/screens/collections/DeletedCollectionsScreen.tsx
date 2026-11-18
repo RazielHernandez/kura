@@ -19,10 +19,17 @@ export function DeletedCollectionsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const permanentlyDeleteCollection = useCollectionStore(
+    (state) => state.permanentlyDeleteCollection
+  );
 
   const restoreCollection = useCollectionStore(
     (state) => state.restoreCollection
   );
+
+  const isBusy = restoringId !== null || deletingId !== null;
 
   const loadDeletedCollections = useCallback(async () => {
     setIsLoading(true);
@@ -81,6 +88,40 @@ export function DeletedCollectionsScreen() {
     );
   };
 
+  const handlePermanentDelete = (collection: Collection) => {
+    Alert.alert(
+      "Permanently Delete Collection",
+      `Are you sure you want to permanently delete "${collection.name}"?\n\nAll its items, custom fields, notes, tags, history, and images will be permanently deleted. This action cannot be undone.`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete Permanently",
+          style: "destructive",
+          onPress: async () => {
+            setDeletingId(collection.id);
+
+            try {
+              await permanentlyDeleteCollection(collection.id);
+              await loadDeletedCollections();
+            } catch (error) {
+              Alert.alert(
+                "Unable to Delete Collection",
+                error instanceof Error
+                  ? error.message
+                  : "Something went wrong while permanently deleting the collection."
+              );
+            } finally {
+              setDeletingId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -131,7 +172,8 @@ export function DeletedCollectionsScreen() {
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {
             const isRestoring = restoringId === item.id;
-            const isDisabled = restoringId !== null;
+            const isDeleting = deletingId === item.id;
+            const isDisabled = restoringId !== null || deletingId !== null;
 
             return (
               <View style={styles.collectionCard}>
@@ -153,7 +195,7 @@ export function DeletedCollectionsScreen() {
                   </View>
                 </View>
 
-                <Pressable
+                {/* <Pressable
                   style={[
                     styles.restoreButton,
                     isDisabled && styles.disabledButton,
@@ -171,7 +213,42 @@ export function DeletedCollectionsScreen() {
                       Restore
                     </Text>
                   )}
-                </Pressable>
+                </Pressable> */}
+                <View style={styles.actions}>
+                  <Pressable
+                    style={[
+                      styles.restoreButton,
+                      isDisabled && styles.disabledButton,
+                    ]}
+                    disabled={isDisabled}
+                    onPress={() => handleRestore(item)}
+                  >
+                    {isRestoring ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.restoreButtonText}>
+                        Restore
+                      </Text>
+                    )}
+                  </Pressable>
+
+                  <Pressable
+                    style={[
+                      styles.deleteButton,
+                      isDisabled && styles.disabledButton,
+                    ]}
+                    disabled={isDisabled}
+                    onPress={() => handlePermanentDelete(item)}
+                  >
+                    {isDeleting ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.deleteButtonText}>
+                        Delete
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
               </View>
             );
           }}
@@ -292,5 +369,26 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.5,
+  },
+
+  actions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  deleteButton: {
+    backgroundColor: "#DC2626",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    minWidth: 76,
+    alignItems: "center",
+  },
+
+  deleteButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 13,
   },
 });
