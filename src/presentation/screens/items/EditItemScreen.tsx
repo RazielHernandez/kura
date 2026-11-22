@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 
 import {
@@ -23,6 +22,7 @@ import { Image } from "react-native";
 import { imagePickerService } from "../../../database/services/ImagePickerService";
 import { SelectedImage } from "../../../database/services/ImagePickerService";
 import { useItemImageStore } from "../../../database/stores/images/ItemImageStore";
+import { useTagStore } from "../../../database/stores/tags/TagStore";
 
 interface EditItemScreenProps {
   itemId: string;
@@ -35,6 +35,8 @@ export function EditItemScreen({
     item,
     fields,
     values,
+    historicalFields,
+    tagIds,
     isLoading,
     error: loadError,
     loadDetails,
@@ -60,6 +62,14 @@ export function EditItemScreen({
     clearError,
   } = useItemStore();
 
+  const {
+    tags,
+    isLoading: isLoadingTags,
+    error: tagError,
+    loadTags,
+    clearTags,
+  } = useTagStore();
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [favorite, setFavorite] = useState(false);
@@ -70,15 +80,38 @@ export function EditItemScreen({
   const [fieldValues, setFieldValues] = useState<
     Record<string, string | null>
   >({});
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    loadDetails(itemId);
+    if (!item || item.id !== itemId) {
+      return;
+    }
+
+    loadTags(item.collectionId);
 
     return () => {
+      clearTags();
+    };
+  }, [item, itemId, loadTags, clearTags]);
+
+  useEffect(() => {
+    loadDetails(itemId);
+    clearError();
+
+    return () => {
+      clearDetails();
       clearError();
     };
+  }, [itemId]);
+
+  useEffect(() => {
+    setInitialized(false);
+    setSelectedTagIds([]);
+    setFieldValues({});
+    setSelectedImages([]);
+    setLocalError(null);
   }, [itemId]);
 
   useEffect(() => {
@@ -88,15 +121,16 @@ export function EditItemScreen({
       clearImages();
     };
   }, [itemId]);
-
+  
   useEffect(() => {
-    if (!item || initialized) {
+    if (!item || item.id !== itemId || initialized) {
       return;
     }
 
     setName(item.name);
     setDescription(item.description ?? "");
     setFavorite(item.favorite);
+    setSelectedTagIds(tagIds);
 
     const initialValues: Record<string, string | null> = {};
 
@@ -106,7 +140,7 @@ export function EditItemScreen({
 
     setFieldValues(initialValues);
     setInitialized(true);
-  }, [item, values, initialized]);
+  }, [item, itemId, values, tagIds, initialized]);
 
   const handleValueChange = (
     fieldId: string,
@@ -116,6 +150,14 @@ export function EditItemScreen({
       ...current,
       [fieldId]: value,
     }));
+  };
+
+  const handleToggleTag = (tagId: string) => {
+    setSelectedTagIds((current) =>
+      current.includes(tagId)
+        ? current.filter((id) => id !== tagId)
+        : [...current, tagId]
+    );
   };
 
   const handlePickImages = async () => {
@@ -217,6 +259,9 @@ export function EditItemScreen({
   const handleSave = async () => {
     if (!item) return;
 
+    setLocalError(null);
+    clearError();
+
     if (!name.trim()) {
       setSaveErrorMessage("Please enter an item name.");
       return;
@@ -227,6 +272,7 @@ export function EditItemScreen({
       name: name.trim(),
       description: description.trim() || null,
       favorite,
+      tagIds: selectedTagIds,
       values: fields.map((field) => ({
         fieldId: field.id,
         value: fieldValues[field.id] ?? null,
@@ -468,6 +514,65 @@ export function EditItemScreen({
 
             {imageError && (
               <Text style={styles.imageError}>{imageError}</Text>
+            )}
+          </View>
+
+          {/* Tags */}
+          <View style={styles.section}>
+            <View style={styles.tagHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>Tags</Text>
+                <Text style={styles.helperText}>
+                  Organize this item with tags
+                </Text>
+              </View>
+
+              <Text style={styles.imageCount}>
+                {selectedTagIds.length} selected
+              </Text>
+            </View>
+
+            {isLoadingTags ? (
+              <ActivityIndicator color="#2563EB" />
+            ) : tags.length === 0 ? (
+              <Text style={styles.emptyTagsText}>
+                No tags available for this collection.
+                Create tags in Manage Tags first.
+              </Text>
+            ) : (
+              <View style={styles.tagList}>
+                {tags.map((tag) => {
+                  const selected = selectedTagIds.includes(tag.id);
+
+                  return (
+                    <Pressable
+                      key={tag.id}
+                      onPress={() => handleToggleTag(tag.id)}
+                      style={[
+                        styles.tagChip,
+                        selected && styles.tagChipSelected,
+                        selected && tag.color
+                          ? { backgroundColor: tag.color }
+                          : null,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.tagChipText,
+                          selected && styles.tagChipTextSelected,
+                        ]}
+                      >
+                        {selected ? "✓ " : ""}
+                        {tag.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+
+            {tagError && (
+              <Text style={styles.imageError}>{tagError}</Text>
             )}
           </View>
 
@@ -764,5 +869,48 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: "#2563EB",
+  },
+
+  tagHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+  tagList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+
+  tagChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
+  },
+
+  tagChipSelected: {
+    backgroundColor: "#2563EB",
+    borderColor: "#2563EB",
+  },
+
+  tagChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#374151",
+  },
+
+  tagChipTextSelected: {
+    color: "#FFFFFF",
+  },
+
+  emptyTagsText: {
+    fontSize: 13,
+    color: "#9CA3AF",
+    lineHeight: 20,
   },
 });

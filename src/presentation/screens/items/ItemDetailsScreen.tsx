@@ -394,6 +394,7 @@ export function ItemDetailsScreen({
   );
 }
 
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,

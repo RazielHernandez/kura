@@ -8,12 +8,14 @@ import { HistoricalItemField } from "../../models/HistoricalItemField";
 import { itemRepository } from "../../repositories/ItemRepository";
 import { collectionFieldRepository } from "../../repositories/CollectionFieldRepository";
 import { itemValueRepository } from "../../repositories/ItemValueRepository";
+import { itemTagRepository } from "../../repositories/ItemTagRepository";
 
 interface ItemDetailsState {
   item: Item | null;
   fields: CollectionField[];
   values: ItemValue[];
   historicalFields: HistoricalItemField[];
+  tagIds: string[];
 
   isLoading: boolean;
   error: string | null;
@@ -31,6 +33,7 @@ export const useItemDetailsStore =
       fields: [],
       values: [],
       historicalFields: [],
+      tagIds: [],
 
       isLoading: false,
       error: null,
@@ -54,6 +57,7 @@ export const useItemDetailsStore =
             fields,
             values,
             historicalFields,
+            tagIds,
           ] = await Promise.all([
             collectionFieldRepository.getByCollectionId(
               item.collectionId
@@ -62,6 +66,7 @@ export const useItemDetailsStore =
             itemValueRepository.getHistoricalFieldsByItemId(
               item.id
             ),
+            itemTagRepository.getTagIdsByItemId(item.id),
           ]);
 
           // Ignore results from an outdated request.
@@ -74,6 +79,7 @@ export const useItemDetailsStore =
             fields,
             values,
             historicalFields,
+            tagIds,
             isLoading: false,
             error: null,
           });
@@ -100,6 +106,7 @@ export const useItemDetailsStore =
           fields: [],
           values: [],
           historicalFields: [],
+          tagIds: [],
           isLoading: false,
           error: null,
         });

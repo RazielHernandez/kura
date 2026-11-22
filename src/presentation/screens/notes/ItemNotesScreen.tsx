@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from "react";
+
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,7 +16,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ItemNote } from "../../../database/models/ItemNote";
-
 import { useItemNoteStore } from "../../../database/stores/notes/ItemNoteStore";
 
 interface ItemNotesScreenProps {
@@ -39,20 +41,16 @@ export function ItemNotesScreen({
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedNote, setSelectedNote] =
     useState<ItemNote | null>(null);
-
   const [content, setContent] = useState("");
-  const [localError, setLocalError] = useState<string | null>(
-    null
-  );
+  const [localError, setLocalError] = useState<string | null>(null);
 
+  useEffect(() => {
+    loadNotes(itemId);
 
-    useEffect(() => {
-        loadNotes(itemId);
-
-        return () => {
-            clearNotes();
-        };
-    }, [itemId, loadNotes, clearNotes]);
+    return () => {
+      clearNotes();
+    };
+  }, [itemId, loadNotes, clearNotes]);
 
   const openCreateModal = () => {
     setSelectedNote(null);
@@ -89,17 +87,11 @@ export function ItemNotesScreen({
     }
 
     setLocalError(null);
+    clearError();
 
-    let success: boolean;
-
-    if (selectedNote) {
-      success = await updateNote(
-        selectedNote.id,
-        trimmedContent
-      );
-    } else {
-      success = await createNote(itemId, trimmedContent);
-    }
+    const success = selectedNote
+      ? await updateNote(selectedNote.id, trimmedContent)
+      : await createNote(itemId, trimmedContent);
 
     if (success) {
       setModalVisible(false);
@@ -113,10 +105,7 @@ export function ItemNotesScreen({
       "Delete Note",
       "Are you sure you want to delete this note?",
       [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
+        { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
           style: "destructive",
@@ -142,13 +131,13 @@ export function ItemNotesScreen({
     });
   };
 
+  const isEditing = selectedNote !== null;
+
   return (
-    <SafeAreaView
-      style={styles.screen}
-      edges={["top", "bottom"]}
-    >
+    <SafeAreaView style={styles.screen} edges={["top", "bottom"]}>
+      {/* Header */}
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerText}>
           <Text style={styles.title}>Notes</Text>
           <Text style={styles.subtitle}>
             {notes.length === 1
@@ -158,81 +147,105 @@ export function ItemNotesScreen({
         </View>
 
         <Pressable
-          style={styles.addButton}
+          style={({ pressed }) => [
+            styles.addButton,
+            pressed && styles.pressed,
+          ]}
           onPress={openCreateModal}
+          accessibilityRole="button"
+          accessibilityLabel="Add note"
         >
-          <Text style={styles.addButtonText}>+ Add Note</Text>
+          <Text style={styles.addButtonIcon}>＋</Text>
+          <Text style={styles.addButtonText}>Add Note</Text>
         </Pressable>
       </View>
 
+      {/* Error */}
       {error && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
-
           <Pressable onPress={() => loadNotes(itemId)}>
             <Text style={styles.retryText}>Retry</Text>
           </Pressable>
         </View>
       )}
 
+      {/* Notes */}
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          notes.length === 0 && styles.emptyContent,
+        ]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        
         {isLoading && notes.length === 0 ? (
-            <View style={styles.center}>
+          <View style={styles.center}>
             <ActivityIndicator size="large" color="#2563EB" />
             <Text style={styles.loadingText}>Loading notes...</Text>
-            </View>
+          </View>
         ) : notes.length === 0 && !error ? (
-            <View style={styles.emptyContainer}>
-                <View style={styles.emptyIcon}>
-                    <Text style={styles.emptyIconText}>✎</Text>
-                </View>
-
-                <Text style={styles.emptyTitle}>
-                    No notes yet
-                </Text>
-
-                <Text style={styles.emptyDescription}>
-                    Keep track of important details, thoughts, and
-                    information about this item.
-                </Text>
-
-                <Pressable
-                    style={styles.emptyButton}
-                    onPress={openCreateModal}
-                >
-                    <Text style={styles.emptyButtonText}>
-                        Create your first note
-                    </Text>
-                </Pressable>
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyIcon}>
+              <Text style={styles.emptyIconText}>✎</Text>
             </View>
+
+            <Text style={styles.emptyTitle}>No notes yet</Text>
+
+            <Text style={styles.emptyDescription}>
+              Keep track of important details, thoughts, and
+              information about this item.
+            </Text>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.emptyButton,
+                pressed && styles.pressed,
+              ]}
+              onPress={openCreateModal}
+            >
+              <Text style={styles.emptyButtonText}>
+                Create your first note
+              </Text>
+            </Pressable>
+          </View>
         ) : (
           notes.map((note) => (
             <View key={note.id} style={styles.noteCard}>
               <View style={styles.noteHeader}>
-                <Text style={styles.noteDate}>
-                  Updated {formatDate(note.updatedAt)}
-                </Text>
+                <View style={styles.dateContainer}>
+                  <Text style={styles.dateLabel}>LAST UPDATED</Text>
+                  <Text style={styles.noteDate}>
+                    {formatDate(note.updatedAt)}
+                  </Text>
+                </View>
 
                 <View style={styles.noteActions}>
                   <Pressable
+                    style={({ pressed }) => [
+                      styles.iconButton,
+                      pressed && styles.pressed,
+                    ]}
                     onPress={() => openEditModal(note)}
-                    hitSlop={8}
+                    hitSlop={6}
+                    accessibilityRole="button"
+                    accessibilityLabel="Edit note"
                   >
-                    <Text style={styles.editAction}>Edit</Text>
+                    <Text style={styles.editIcon}>✎</Text>
                   </Pressable>
 
                   <Pressable
+                    style={({ pressed }) => [
+                      styles.iconButton,
+                      pressed && styles.pressed,
+                    ]}
                     onPress={() => handleDelete(note)}
-                    hitSlop={8}
+                    hitSlop={6}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete note"
                   >
-                    <Text style={styles.deleteAction}>
-                      Delete
-                    </Text>
+                    <Text style={styles.deleteIcon}>⌫</Text>
                   </Pressable>
                 </View>
               </View>
@@ -245,30 +258,51 @@ export function ItemNotesScreen({
         )}
       </ScrollView>
 
+      {/* Create / Edit modal */}
       <Modal
         visible={modalVisible}
         transparent
         animationType="slide"
+        statusBarTranslucent
         onRequestClose={closeModal}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={closeModal}
+            disabled={isSaving}
+          />
+
           <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {selectedNote ? "Edit Note" : "New Note"}
-              </Text>
+              <View>
+                <Text style={styles.modalTitle}>
+                  {isEditing ? "Edit Note" : "New Note"}
+                </Text>
+                <Text style={styles.modalSubtitle}>
+                  {isEditing
+                    ? "Update your item notes"
+                    : "Add some details about this item"}
+                </Text>
+              </View>
 
               <Pressable
+                style={styles.closeButton}
                 onPress={closeModal}
                 disabled={isSaving}
+                accessibilityRole="button"
+                accessibilityLabel="Close editor"
               >
-                <Text style={styles.closeButton}>✕</Text>
+                <Text style={styles.closeButtonText}>✕</Text>
               </Pressable>
             </View>
 
-            <Text style={styles.inputLabel}>
-              Note content
-            </Text>
+            <Text style={styles.inputLabel}>NOTE CONTENT</Text>
 
             <TextInput
               style={styles.noteInput}
@@ -278,18 +312,23 @@ export function ItemNotesScreen({
                 setLocalError(null);
                 clearError();
               }}
-              placeholder="Write something..."
+              placeholder="Write something worth remembering..."
               placeholderTextColor="#9CA3AF"
               multiline
               textAlignVertical="top"
               autoFocus
               editable={!isSaving}
+              maxLength={10000}
             />
 
-            {localError && (
-              <Text style={styles.errorText}>
-                {localError}
+            <View style={styles.inputFooter}>
+              <Text style={styles.characterCount}>
+                {content.length} / 10,000
               </Text>
+            </View>
+
+            {localError && (
+              <Text style={styles.errorText}>{localError}</Text>
             )}
 
             {error && (
@@ -298,13 +337,14 @@ export function ItemNotesScreen({
 
             <View style={styles.modalActions}>
               <Pressable
-                style={styles.cancelButton}
+                style={({ pressed }) => [
+                  styles.cancelButton,
+                  pressed && styles.pressed,
+                ]}
                 onPress={closeModal}
                 disabled={isSaving}
               >
-                <Text style={styles.cancelButtonText}>
-                  Cancel
-                </Text>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </Pressable>
 
               <Pressable
@@ -319,13 +359,13 @@ export function ItemNotesScreen({
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
                   <Text style={styles.saveButtonText}>
-                    {selectedNote ? "Save Changes" : "Save Note"}
+                    {isEditing ? "Save Changes" : "Save Note"}
                   </Text>
                 )}
               </Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -346,6 +386,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
+  headerText: {
+    flex: 1,
+  },
+
   title: {
     fontSize: 28,
     fontWeight: "700",
@@ -360,15 +404,28 @@ const styles = StyleSheet.create({
 
   addButton: {
     backgroundColor: "#2563EB",
-    paddingHorizontal: 16,
+    paddingHorizontal: 15,
     paddingVertical: 11,
     borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+
+  addButtonIcon: {
+    color: "#FFFFFF",
+    fontSize: 19,
+    fontWeight: "500",
   },
 
   addButtonText: {
     color: "#FFFFFF",
     fontWeight: "600",
     fontSize: 14,
+  },
+
+  pressed: {
+    opacity: 0.75,
   },
 
   scrollView: {
@@ -378,13 +435,13 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 20,
     paddingBottom: 32,
-    gap: 14,
+    gap: 12,
   },
 
   noteCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    padding: 16,
+    padding: 17,
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
@@ -393,28 +450,47 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 14,
+  },
+
+  dateContainer: {
+    gap: 4,
+  },
+
+  dateLabel: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1,
+    color: "#9CA3AF",
   },
 
   noteDate: {
     fontSize: 12,
-    color: "#9CA3AF",
+    color: "#6B7280",
+    fontWeight: "500",
   },
 
   noteActions: {
     flexDirection: "row",
-    gap: 16,
+    gap: 8,
   },
 
-  editAction: {
-    fontSize: 13,
-    fontWeight: "600",
+  iconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  editIcon: {
+    fontSize: 18,
     color: "#2563EB",
   },
 
-  deleteAction: {
-    fontSize: 13,
-    fontWeight: "600",
+  deleteIcon: {
+    fontSize: 19,
     color: "#DC2626",
   },
 
@@ -424,16 +500,22 @@ const styles = StyleSheet.create({
     color: "#374151",
   },
 
+  emptyContent: {
+    flexGrow: 1,
+  },
+
   emptyContainer: {
+    flex: 1,
     alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 24,
-    paddingTop: 80,
+    paddingVertical: 48,
   },
 
   emptyIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: 68,
+    height: 68,
+    borderRadius: 22,
     backgroundColor: "#DBEAFE",
     alignItems: "center",
     justifyContent: "center",
@@ -441,7 +523,7 @@ const styles = StyleSheet.create({
   },
 
   emptyIconText: {
-    fontSize: 32,
+    fontSize: 34,
     color: "#2563EB",
   },
 
@@ -463,7 +545,7 @@ const styles = StyleSheet.create({
   emptyButton: {
     backgroundColor: "#2563EB",
     paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingVertical: 13,
     borderRadius: 12,
   },
 
@@ -506,41 +588,70 @@ const styles = StyleSheet.create({
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
     justifyContent: "flex-end",
+  },
+
+  modalBackdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
 
   modalContent: {
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 32,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === "ios" ? 32 : 24,
+  },
+
+  modalHandle: {
+    width: 38,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "#D1D5DB",
+    alignSelf: "center",
+    marginBottom: 22,
   },
 
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 25,
   },
 
   modalTitle: {
-    fontSize: 21,
+    fontSize: 22,
     fontWeight: "700",
     color: "#111827",
   },
 
-  closeButton: {
-    fontSize: 22,
+  modalSubtitle: {
+    fontSize: 13,
     color: "#6B7280",
-    padding: 4,
+    marginTop: 4,
+  },
+
+  closeButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  closeButtonText: {
+    fontSize: 15,
+    color: "#6B7280",
   },
 
   inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
+    color: "#6B7280",
     marginBottom: 10,
   },
 
@@ -551,10 +662,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: 14,
-    padding: 14,
+    padding: 15,
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 23,
     color: "#111827",
+  },
+
+  inputFooter: {
+    alignItems: "flex-end",
+    marginTop: 7,
+  },
+
+  characterCount: {
+    fontSize: 11,
+    color: "#9CA3AF",
   },
 
   modalActions: {

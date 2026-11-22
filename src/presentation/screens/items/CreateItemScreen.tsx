@@ -14,6 +14,7 @@ import {
 import { router } from "expo-router";
 import { useCollectionDetailsStore } from "../../../database/stores/collections/CollectionDetailsStore";
 import { useItemStore } from "../../../database/stores/items/ItemStore";
+import { useTagStore } from "../../../database/stores/tags/TagStore";
 import { DynamicFieldInput } from "../../components/items/DynamicFieldInput";
 import { Image } from "react-native";
 import { imagePickerService } from "../../../database/services/ImagePickerService";
@@ -43,6 +44,16 @@ export function CreateItemScreen({
     clearError,
   } = useItemStore();
 
+  const {
+    tags,
+    isLoading: isLoadingTags,
+    error: tagError,
+    loadTags,
+    clearTags,
+  } = useTagStore();
+
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [favorite, setFavorite] = useState(false);
@@ -71,6 +82,14 @@ export function CreateItemScreen({
       [fieldId]: value,
     }));
   };
+
+  useEffect(() => {
+    loadTags(collectionId);
+
+    return () => {
+      clearTags();
+    };
+  }, [collectionId, loadTags, clearTags]);
 
   const handlePickImages = async () => {
     try {
@@ -104,6 +123,14 @@ export function CreateItemScreen({
     );
   };
 
+  const handleToggleTag = (tagId: string) => {
+    setSelectedTagIds((current) =>
+      current.includes(tagId)
+        ? current.filter((id) => id !== tagId)
+        : [...current, tagId]
+    );
+  };
+
   const handleCreate = async () => {
     const trimmedName = name.trim();
 
@@ -126,6 +153,7 @@ export function CreateItemScreen({
       description: description.trim() || null,
       favorite,
       values: itemValues,
+      tagIds: selectedTagIds,
       images: selectedImages.map((image) => ({
         uri: image.uri,
       })),
@@ -285,6 +313,68 @@ export function CreateItemScreen({
                 </View>
               ))}
             </ScrollView>
+          )}
+        </View>
+
+        {/* Tags */}
+        <View style={styles.section}>
+          <View style={styles.tagHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>Tags</Text>
+              <Text style={styles.helperText}>
+                Organize this item with tags
+              </Text>
+            </View>
+
+            <Text style={styles.imageCount}>
+              {selectedTagIds.length} selected
+            </Text>
+          </View>
+
+          {isLoadingTags ? (
+            <ActivityIndicator color="#2563EB" />
+          ) : tagError ? (
+            <Text style={styles.errorText}>{tagError}</Text>
+          ) : tags.length === 0 ? (
+            <Text style={styles.emptyTagsText}>
+              No tags available. Create tags in this collection first.
+            </Text>
+          ) : (
+            <View style={styles.tagList}>
+              {tags.map((tag) => {
+                const isSelected = selectedTagIds.includes(tag.id);
+
+                return (
+                  <Pressable
+                    key={tag.id}
+                    onPress={() => handleToggleTag(tag.id)}
+                    style={[
+                      styles.tagChip,
+                      {
+                        borderColor: tag.color ?? "#D1D5DB",
+                        backgroundColor: isSelected
+                          ? "#DBEAFE"
+                          : "#FFFFFF",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.tagText,
+                        {
+                          color: isSelected
+                            ? "#1D4ED8"
+                            : "#374151",
+                        },
+                      ]}
+                    >
+                      {isSelected ? "✓ " : ""}
+                      {tag.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           )}
         </View>
 
@@ -537,5 +627,35 @@ const styles = StyleSheet.create({
     fontSize: 20,
     lineHeight: 23,
     fontWeight: "600",
+  },
+
+  tagHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+  tagList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+
+  tagChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+
+  tagText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  emptyTagsText: {
+    fontSize: 13,
+    color: "#9CA3AF",
   },
 });
