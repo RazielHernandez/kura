@@ -17,7 +17,15 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          href: null,
+          title: "Dashboard",
+          tabBarLabel: "Home",
+          tabBarIcon: ({ focused, size }) => (
+            <Ionicons
+              name={focused ? "home" : "home-outline"}
+              size={size}
+              color={focused ? ACTIVE_COLOR : INACTIVE_COLOR}
+            />
+          ),
         }}
       />
 

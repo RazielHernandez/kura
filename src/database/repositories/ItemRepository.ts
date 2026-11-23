@@ -2,6 +2,14 @@ import { BaseRepository } from "./BaseRepository";
 import { Item } from "../models/Item";
 import { generateId } from "../utils/UUID";
 import { now } from "../utils/DateUtils";
+import { ItemWithCollection } from "../models/Item";
+
+interface ItemWithCollectionRow extends Omit<Item, "favorite"> {
+  favorite: number;
+  collectionName: string;
+  collectionIcon: string | null;
+  collectionColor: string | null;
+}
 
 export class ItemRepository extends BaseRepository<Item> {
   constructor() {
@@ -81,6 +89,61 @@ export class ItemRepository extends BaseRepository<Item> {
     );
 
     return item;
+  }
+
+  async getRecentItems(
+    limit: number = 5
+  ): Promise<ItemWithCollection[]> {
+    const rows = await this.queryRaw<ItemWithCollectionRow>(
+      `
+      SELECT
+        i.*,
+        c.name AS collectionName,
+        c.icon AS collectionIcon,
+        c.color AS collectionColor
+      FROM items i
+      INNER JOIN collections c
+        ON c.id = i.collectionId
+      WHERE i.deletedAt IS NULL
+        AND c.deletedAt IS NULL
+      ORDER BY i.updatedAt DESC
+      LIMIT ?
+      `,
+      [Math.max(1, Math.floor(limit))]
+    );
+
+    return rows.map((row) => ({
+      ...row,
+      favorite: Boolean(row.favorite),
+    }));
+  }
+
+  async getFavoriteItems(
+    limit: number = 5
+  ): Promise<ItemWithCollection[]> {
+    const rows = await this.queryRaw<ItemWithCollectionRow>(
+      `
+      SELECT
+        i.*,
+        c.name AS collectionName,
+        c.icon AS collectionIcon,
+        c.color AS collectionColor
+      FROM items i
+      INNER JOIN collections c
+        ON c.id = i.collectionId
+      WHERE i.favorite = 1
+        AND i.deletedAt IS NULL
+        AND c.deletedAt IS NULL
+      ORDER BY i.updatedAt DESC
+      LIMIT ?
+      `,
+      [Math.max(1, Math.floor(limit))]
+    );
+
+    return rows.map((row) => ({
+      ...row,
+      favorite: Boolean(row.favorite),
+    }));
   }
 
   async update(
