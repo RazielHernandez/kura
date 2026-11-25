@@ -1,8 +1,7 @@
 import { BaseRepository } from "./BaseRepository";
-import { Item } from "../models/Item";
+import { Item, ItemWithCollection } from "../models/Item";
 import { generateId } from "../utils/UUID";
 import { now } from "../utils/DateUtils";
-import { ItemWithCollection } from "../models/Item";
 
 interface ItemWithCollectionRow extends Omit<Item, "favorite"> {
   favorite: number;
@@ -138,6 +137,30 @@ export class ItemRepository extends BaseRepository<Item> {
       LIMIT ?
       `,
       [Math.max(1, Math.floor(limit))]
+    );
+
+    return rows.map((row) => ({
+      ...row,
+      favorite: Boolean(row.favorite),
+    }));
+  }
+
+  async getAllFavoriteItems(): Promise<ItemWithCollection[]> {
+    const rows = await this.queryRaw<ItemWithCollectionRow>(
+      `
+      SELECT
+        i.*,
+        c.name AS collectionName,
+        c.icon AS collectionIcon,
+        c.color AS collectionColor
+      FROM items i
+      INNER JOIN collections c
+        ON c.id = i.collectionId
+      WHERE i.favorite = 1
+        AND i.deletedAt IS NULL
+        AND c.deletedAt IS NULL
+      ORDER BY i.updatedAt DESC
+      `
     );
 
     return rows.map((row) => ({

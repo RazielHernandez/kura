@@ -100,6 +100,10 @@ export function DashboardScreen() {
     router.push("/collections");
   };
 
+  const handleOpenFavorites = () => {
+    router.push("/favorites");
+  };
+
   if (!data && isLoading) {
     return (
       <View
@@ -297,7 +301,8 @@ export function DashboardScreen() {
         {/* Favorite Items */}
 
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+
+          {/* <View style={styles.sectionHeader}>
             <View>
               <Text style={styles.sectionTitle}>
                 Favorites
@@ -306,6 +311,27 @@ export function DashboardScreen() {
                 Your favorite items
               </Text>
             </View>
+          </View> */}
+
+          <View style={styles.sectionHeader}>
+            <View>
+                <Text style={styles.sectionTitle}>
+                Favorites
+                </Text>
+                <Text style={styles.sectionSubtitle}>
+                Your favorite items
+                </Text>
+            </View>
+
+            {data.favoriteItems.length > 0 && (
+                <Pressable
+                onPress={handleOpenFavorites}
+                accessibilityRole="button"
+                accessibilityLabel="View all favorite items"
+                >
+                <Text style={styles.seeAll}>See all</Text>
+                </Pressable>
+            )}
           </View>
 
           {data.favoriteItems.length > 0 ? (

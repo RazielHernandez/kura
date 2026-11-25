@@ -53,30 +53,6 @@ export default function RootLayout() {
     initializeDatabase();
   }, []);
 
-  // if (status === "loading") {
-  //   return (
-  //     <SafeAreaProvider>
-  //       <View style={styles.center}>
-  //         <ActivityIndicator size="large" />
-  //         <Text style={styles.message}>Initializing Kura...</Text>
-  //       </View>
-  //     </SafeAreaProvider>
-      
-  //   );
-  // }
-
-  // if (status === "error") {
-  //   return (
-  //     <View style={styles.center}>
-  //       <Text style={styles.title}>Something went wrong</Text>
-  //       <Text style={styles.message}>{error}</Text>
-  //       <Text onPress={initializeDatabase} style={styles.retry}>
-  //         Try again
-  //       </Text>
-  //     </View>
-  //   );
-  // }
-
   return (
     <SafeAreaProvider>
       {status === "loading" ? (
@@ -107,7 +83,10 @@ export default function RootLayout() {
               headerShown: false,
               animation: "slide_from_right",
             }}
-          />
+          >
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="favorites" />
+          </Stack>
         </>
       )}
     </SafeAreaProvider>
