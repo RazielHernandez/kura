@@ -1,4 +1,3 @@
-
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -37,6 +36,20 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused, size }) => (
             <Ionicons
               name="albums-outline"
+              size={size}
+              color={focused ? ACTIVE_COLOR : INACTIVE_COLOR}
+            />
+          ),
+        }}
+      />
+      
+      <Tabs.Screen
+        name="custom-lists"
+        options={{
+          title: "Lists",
+          tabBarIcon: ({ focused, size }) => (
+            <Ionicons
+              name="list-outline"
               size={size}
               color={focused ? ACTIVE_COLOR : INACTIVE_COLOR}
             />

@@ -1,4 +1,3 @@
-
 import { useLocalSearchParams } from "expo-router";
 import { CollectionDetailsScreen } from "../../../src/presentation/screens/collections/CollectionDetailsScreen";
 

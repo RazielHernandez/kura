@@ -117,6 +117,29 @@ export class ItemRepository extends BaseRepository<Item> {
     }));
   }
 
+  async getAllWithCollection(): Promise<ItemWithCollection[]> {
+    const rows = await this.queryRaw<ItemWithCollectionRow>(
+      `
+      SELECT
+        i.*,
+        c.name AS collectionName,
+        c.icon AS collectionIcon,
+        c.color AS collectionColor
+      FROM items i
+      INNER JOIN collections c
+        ON c.id = i.collectionId
+      WHERE i.deletedAt IS NULL
+        AND c.deletedAt IS NULL
+      ORDER BY i.updatedAt DESC
+      `
+    );
+
+    return rows.map((row) => ({
+      ...row,
+      favorite: Boolean(row.favorite),
+    }));
+  }
+
   async getFavoriteItems(
     limit: number = 5
   ): Promise<ItemWithCollection[]> {

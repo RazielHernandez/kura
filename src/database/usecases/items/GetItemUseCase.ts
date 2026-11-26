@@ -15,5 +15,4 @@ export class GetItemUseCase {
   }
 }
 
-export const getItemUseCase =
-  new GetItemUseCase();
+export const getItemUseCase = new GetItemUseCase();

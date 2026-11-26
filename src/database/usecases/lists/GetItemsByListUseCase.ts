@@ -1,11 +1,11 @@
-import { Item } from "../../models/Item";
+import { ItemWithCollection } from "../../models/Item";
 import { customListRepository } from "../../repositories/CustomListRepository";
 import { listItemRepository } from "../../repositories/ListItemRepository";
 
 export class GetItemsByListUseCase {
   async execute(
     listId: string
-  ): Promise<Item[]> {
+  ): Promise<ItemWithCollection[]> {
     const id = listId.trim();
 
     if (!id) {
@@ -23,5 +23,4 @@ export class GetItemsByListUseCase {
   }
 }
 
-export const getItemsByListUseCase =
-  new GetItemsByListUseCase();
+export const getItemsByListUseCase = new GetItemsByListUseCase();

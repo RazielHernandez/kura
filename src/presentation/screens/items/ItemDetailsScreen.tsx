@@ -20,6 +20,9 @@ import { useItemImageStore } from "../../../database/stores/images/ItemImageStor
 import { ItemGalleryImage } from "../../components/images/ItemGalleryImage";
 import { ItemImagePreview } from "../../components/images/ItemImagePreview";
 
+import { useCustomListStore } from "../../../database/stores/customLists/customListStore";
+import { useItemCustomListsStore } from "../../../database/stores/customLists/itemCustomListsStore";
+
 interface ItemDetailsScreenProps {
   itemId: string;
 }
@@ -49,6 +52,27 @@ export function ItemDetailsScreen({
   const itemError = useItemStore(state => state.error);
   const clearError = useItemStore(state => state.clearError);
   const [selectedPreviewUri, setSelectedPreviewUri] = useState<string | null>(null);
+
+  const [showCustomLists, setShowCustomLists] = useState(false);
+
+  const customLists = useCustomListStore(
+    (state) => state.customLists
+  );
+  const loadCustomLists = useCustomListStore(
+    (state) => state.loadCustomLists
+  );
+  const isLoadingLists = useCustomListStore(
+    (state) => state.isLoading
+  );
+
+  const {
+    listIds,
+    isLoading: isLoadingItemLists,
+    isSaving: isSavingItemLists,
+    loadListsForItem,
+    addToList,
+    removeFromList,
+  } = useItemCustomListsStore();
 
   useFocusEffect(
     useCallback(() => {
@@ -118,6 +142,32 @@ export function ItemDetailsScreen({
             ]
         );
     };
+  
+  const handleOpenCustomLists = () => {
+    if (!item) return;
+
+    setShowCustomLists(true);
+
+    void loadCustomLists().catch(() => {});
+    void loadListsForItem(item.id);
+  };
+
+  const handleToggleCustomList = async (listId: string) => {
+    if (!item) return;
+
+    try {
+      if (listIds.includes(listId)) {
+        await removeFromList(listId, item.id);
+      } else {
+        await addToList(listId, item.id);
+      }
+    } catch {
+      Alert.alert(
+        "Error",
+        "Could not update this item's Custom Lists."
+      );
+    }
+  };
 
   if (isLoading) {
     return (
@@ -197,28 +247,7 @@ export function ItemDetailsScreen({
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.imageGallery}
             >
-              {/* {images.map((image) => {
-                const imageUri = image.thumbnailUri ?? image.uri;
-                // const imageUri = image.uri;
-
-                const originalFile = new File(image.uri);
-                const thumbnailFile = image.thumbnailUri
-                  ? new File(image.thumbnailUri)
-                  : null;
-
-                return (
-                  <Pressable
-                    key={image.id}
-                    onPress={() => setSelectedPreviewUri(image.uri)}
-                  >
-                    <Image
-                      source={{ uri: imageUri }}
-                      style={styles.galleryImage}
-                      resizeMode="cover"
-                    />
-                  </Pressable>
-                );
-              })} */}
+              
               {images.map((image) => (
                 <ItemGalleryImage
                   key={image.id}
@@ -311,6 +340,15 @@ export function ItemDetailsScreen({
           </Pressable>
 
           <Pressable
+            style={styles.actionButton}
+            onPress={handleOpenCustomLists}
+          >
+            <Text style={styles.actionText}>
+              📋 Custom Lists
+            </Text>
+          </Pressable>
+
+          <Pressable
               style={styles.actionButton}
               onPress={handleDeleteItem}
               >
@@ -349,33 +387,6 @@ export function ItemDetailsScreen({
         </View>
       </ScrollView>
 
-      {/* <Modal
-        visible={selectedPreviewUri !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelectedPreviewUri(null)}
-      >
-        <Pressable
-          style={styles.imagePreviewBackdrop}
-          onPress={() => setSelectedPreviewUri(null)}
-        >
-          {selectedPreviewUri && (
-            <Image
-              source={{ uri: selectedPreviewUri }}
-              style={styles.fullScreenImage}
-              resizeMode="contain"
-            />
-          )}
-
-          <Pressable
-            style={styles.closePreviewButton}
-            onPress={() => setSelectedPreviewUri(null)}
-          >
-            <Text style={styles.closePreviewText}>✕</Text>
-          </Pressable>
-        </Pressable>
-      </Modal> */}
-
       <Modal
         visible={selectedPreviewUri !== null}
         transparent
@@ -388,6 +399,115 @@ export function ItemDetailsScreen({
             onClose={() => setSelectedPreviewUri(null)}
           />
         )}
+      </Modal>
+
+      <Modal
+        visible={showCustomLists}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCustomLists(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.customListsModal}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Custom Lists</Text>
+                <Text style={styles.modalSubtitle}>
+                  Choose which lists contain this item.
+                </Text>
+              </View>
+
+              <Pressable
+                onPress={() => setShowCustomLists(false)}
+                style={styles.modalCloseButton}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </Pressable>
+            </View>
+
+            {isLoadingLists || isLoadingItemLists ? (
+              <View style={styles.modalLoading}>
+                <ActivityIndicator size="large" color="#2563EB" />
+              </View>
+            ) : customLists.length === 0 ? (
+              <View style={styles.modalEmpty}>
+                <Text style={styles.modalEmptyText}>
+                  You haven't created any Custom Lists yet.
+                </Text>
+
+                <Pressable
+                  style={styles.createListButton}
+                  onPress={() => {
+                    setShowCustomLists(false);
+                    router.push("/custom-lists/new");
+                  }}
+                >
+                  <Text style={styles.createListButtonText}>
+                    Create a List
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              <ScrollView
+                style={styles.customListsScroll}
+                showsVerticalScrollIndicator={false}
+              >
+                {customLists.map((list) => {
+                  const isSelected = listIds.includes(list.id);
+
+                  return (
+                    <Pressable
+                      key={list.id}
+                      style={styles.customListRow}
+                      onPress={() => handleToggleCustomList(list.id)}
+                      disabled={isSavingItemLists}
+                    >
+                      <View
+                        style={[
+                          styles.customListIcon,
+                          { backgroundColor: list.color ?? "#DBEAFE" },
+                        ]}
+                      >
+                        <Text style={styles.customListEmoji}>
+                          {list.icon ?? "📋"}
+                        </Text>
+                      </View>
+
+                      <Text style={styles.customListName}>
+                        {list.name}
+                      </Text>
+
+                      <View
+                        style={[
+                          styles.customListCheckbox,
+                          isSelected && styles.customListCheckboxSelected,
+                        ]}
+                      >
+                        {isSelected && (
+                          <Text style={styles.customListCheckmark}>✓</Text>
+                        )}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            {isSavingItemLists && (
+              <ActivityIndicator
+                style={styles.modalSaving}
+                color="#2563EB"
+              />
+            )}
+
+            <Pressable
+              style={styles.modalDoneButton}
+              onPress={() => setShowCustomLists(false)}
+            >
+              <Text style={styles.modalDoneText}>Done</Text>
+            </Pressable>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
     
@@ -575,5 +695,152 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     lineHeight: 19,
     marginBottom: 12,
+  },
+
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "flex-end",
+  },
+
+  customListsModal: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 32,
+    maxHeight: "75%",
+  },
+
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+
+  modalTitle: {
+    fontSize: 21,
+    fontWeight: "700",
+    color: "#111827",
+  },
+
+  modalSubtitle: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginTop: 5,
+  },
+
+  modalCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  modalCloseText: {
+    fontSize: 16,
+    color: "#6B7280",
+  },
+
+  modalLoading: {
+    padding: 40,
+  },
+
+  modalEmpty: {
+    alignItems: "center",
+    paddingVertical: 30,
+  },
+
+  modalEmptyText: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
+  },
+
+  createListButton: {
+    marginTop: 16,
+    backgroundColor: "#2563EB",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+
+  createListButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+
+  customListsScroll: {
+    flexGrow: 0,
+  },
+
+  customListRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    gap: 12,
+  },
+
+  customListIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  customListEmoji: {
+    fontSize: 21,
+  },
+
+  customListName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111827",
+  },
+
+  customListCheckbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#D1D5DB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  customListCheckboxSelected: {
+    backgroundColor: "#2563EB",
+    borderColor: "#2563EB",
+  },
+
+  customListCheckmark: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+
+  modalSaving: {
+    marginTop: 12,
+  },
+
+  modalDoneButton: {
+    backgroundColor: "#2563EB",
+    borderRadius: 12,
+    padding: 15,
+    alignItems: "center",
+    marginTop: 20,
+  },
+
+  modalDoneText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
