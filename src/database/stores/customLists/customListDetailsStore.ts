@@ -8,6 +8,7 @@ import { getCustomListUseCase } from "../../usecases/customLists/GetCustomListUs
 import { getItemsByListUseCase } from "../../usecases/lists/GetItemsByListUseCase";
 import { addItemToListUseCase } from "../../usecases/lists/AddItemToListUseCase";
 import { removeItemFromListUseCase } from "../../usecases/lists/RemoveItemFromListUseCase";
+import { deleteCustomListUseCase } from "../../usecases/customLists/DeleteCustomListUseCase";
 
 interface CustomListDetailsState {
   customList: CustomList | null;
@@ -23,6 +24,8 @@ interface CustomListDetailsState {
   removeItem: (itemId: string) => Promise<void>;
 
   clearDetails: () => void;
+
+  deleteList: () => Promise<void>;
 }
 
 function getErrorMessage(
@@ -174,6 +177,41 @@ export const useCustomListDetailsStore =
           isSaving: false,
           error: null,
         });
+      },
+
+      deleteList: async () => {
+        const listId = currentListId;
+
+        if (!listId) {
+          throw new Error("No custom list is currently selected.");
+        }
+
+        set({
+          isSaving: true,
+          error: null,
+        });
+
+        try {
+          await deleteCustomListUseCase.execute(listId);
+
+          if (currentListId === listId) {
+            set({
+              customList: null,
+              items: [],
+            });
+          }
+        } catch (error) {
+          set({
+            error: getErrorMessage(
+              error,
+              "Unable to delete custom list."
+            ),
+          });
+
+          throw error;
+        } finally {
+          set({ isSaving: false });
+        }
       },
     };
   });

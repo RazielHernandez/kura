@@ -15,6 +15,9 @@ import {
 import { getCustomListsUseCase } from "../../usecases/customLists/GetCustomListsUseCase";
 import { deleteCustomListUseCase } from "../../usecases/customLists/DeleteCustomListUseCase";
 import { restoreCustomListUseCase } from "../../usecases/customLists/RestoreCustomListUseCase";
+import {
+  permanentlyDeleteCustomListUseCase,
+} from "../../usecases/customLists/PermanentlyDeleteCustomListUseCase";
 
 interface CustomListStoreState {
   customLists: CustomList[];
@@ -33,6 +36,7 @@ interface CustomListStoreState {
   ) => Promise<CustomList>;
 
   deleteCustomList: (id: string) => Promise<void>;
+  permanentlyDeleteCustomList: (id: string) => Promise<void>;
 
   restoreCustomList: (id: string) => Promise<void>;
 
@@ -211,6 +215,33 @@ export const useCustomListStore = create<CustomListStoreState>(
             error: getErrorMessage(
               error,
               "Failed to delete custom list."
+            ),
+          });
+
+          throw error;
+        } finally {
+          finishMutation();
+        }
+      },
+
+      permanentlyDeleteCustomList: async (id) => {
+        beginMutation();
+
+        try {
+          await permanentlyDeleteCustomListUseCase.execute(id);
+
+          commitMutation();
+
+          set((state) => ({
+            customLists: state.customLists.filter(
+              (list) => list.id !== id
+            ),
+          }));
+        } catch (error) {
+          set({
+            error: getErrorMessage(
+              error,
+              "Failed to permanently delete custom list."
             ),
           });
 

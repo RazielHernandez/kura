@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 
 import { repairItemThumbnailsWorkflow } from "../../src/database/usecases/workflow/images/RepairItemThumbnailsWorkflow";
 import { validateItemImagesWorkflow } from "../../src/database/usecases/workflow/images/ValidateItemImagesWorkflow";
@@ -155,6 +156,26 @@ export default function SettingsScreen() {
         />
       </View>
 
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Data Recovery</Text>
+
+        <Text style={styles.description}>
+          Restore deleted custom lists or permanently remove them from your device.
+        </Text>
+
+        <Pressable
+          style={styles.navigationButton}
+          onPress={() => router.push("/custom-lists/deleted")}
+          accessibilityRole="button"
+        >
+          <Text style={styles.navigationButtonText}>
+            Deleted Custom Lists
+          </Text>
+
+          <Text style={styles.navigationArrow}>›</Text>
+        </Pressable>
+      </View>
+
       <View style={styles.dangerSection}>
         <Text style={styles.dangerTitle}>Danger Zone</Text>
 
@@ -240,5 +261,26 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "600",
+  },
+
+  navigationButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 8,
+  },
+
+  navigationButtonText: {
+    color: "#2563EB",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+
+  navigationArrow: {
+    color: "#64748B",
+    fontSize: 24,
   },
 });

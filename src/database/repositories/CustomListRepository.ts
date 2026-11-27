@@ -160,6 +160,17 @@ export class CustomListRepository extends BaseRepository<CustomList> {
       [name]
     );
   }
+
+  async getDeletedOrdered(): Promise<CustomList[]> {
+    return this.query(
+      `
+      SELECT *
+      FROM custom_lists
+      WHERE deletedAt IS NOT NULL
+      ORDER BY deletedAt DESC
+      `
+    );
+  }
 }
 
 export const customListRepository =

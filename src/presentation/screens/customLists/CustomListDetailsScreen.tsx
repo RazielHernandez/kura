@@ -22,9 +22,11 @@ export function CustomListDetailsScreen() {
     customList,
     items,
     isLoading,
+    isSaving,
     error,
     loadDetails,
     removeItem,
+    deleteList,
     clearDetails,
   } = useCustomListDetailsStore();
 
@@ -54,6 +56,36 @@ export function CustomListDetailsScreen() {
           onPress: () => removeItem(item.id),
         },
       ]
+    );
+  };
+
+  const handleDeleteList = () => {
+    if (!id) return;
+
+    Alert.alert(
+        "Delete Custom List",
+        `Are you sure you want to delete "${customList?.name}"? The items in this list will not be deleted.`,
+        [
+        {
+            text: "Cancel",
+            style: "cancel",
+        },
+        {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+            try {
+                await deleteList();
+                router.replace("/(tabs)/custom-lists");
+            } catch {
+                Alert.alert(
+                "Error",
+                "Could not delete this custom list."
+                );
+            }
+            },
+        },
+        ]
     );
   };
 
@@ -149,11 +181,24 @@ export function CustomListDetailsScreen() {
                 </Text>
               </View>
 
+              {/* <Text style={styles.title}>{customList.name}</Text>
+
+              <Text style={styles.subtitle}>
+                {items.length} {items.length === 1 ? "item" : "items"}
+              </Text> */}
+
               <Text style={styles.title}>{customList.name}</Text>
 
               <Text style={styles.subtitle}>
                 {items.length} {items.length === 1 ? "item" : "items"}
               </Text>
+
+              <Pressable
+                style={styles.editButton}
+                onPress={() => router.push(`/custom-lists/${id}/edit`)}
+              >
+                <Text style={styles.editButtonText}>✏️ Edit list</Text>
+              </Pressable>
             </View>
 
             <View style={styles.sectionHeader}>
@@ -178,6 +223,18 @@ export function CustomListDetailsScreen() {
               Add existing items from your collections to this list.
             </Text>
           </View>
+        }
+
+        ListFooterComponent={
+            <Pressable
+                style={styles.deleteButton}
+                onPress={handleDeleteList}
+                disabled={isSaving}
+            >
+                <Text style={styles.deleteButtonText}>
+                {isSaving ? "Deleting..." : "Delete List"}
+                </Text>
+            </Pressable>
         }
       />
     </SafeAreaView>
@@ -343,6 +400,34 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     color: "#FFFFFF",
+    fontWeight: "600",
+  },
+
+  editButton: {
+    marginTop: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#DBEAFE",
+  },
+  editButtonText: {
+    color: "#2563EB",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  deleteButton: {
+    marginTop: 32,
+    padding: 15,
+    borderRadius: 12,
+    alignItems: "center",
+    backgroundColor: "#FEE2E2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+    deleteButtonText: {
+    color: "#DC2626",
+    fontSize: 14,
     fontWeight: "600",
   },
 });

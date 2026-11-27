@@ -205,9 +205,7 @@ export const migration001: Migration = {
 
         updatedAt TEXT NOT NULL,
 
-        deletedAt TEXT,
-
-        UNIQUE(name)
+        deletedAt TEXT
 
     );
     
@@ -310,5 +308,10 @@ export const migration001: Migration = {
     
     CREATE UNIQUE INDEX idx_collection_fields_collection_name
     ON collection_fields(collectionId, LOWER(TRIM(name)))
+    WHERE deletedAt IS NULL;
+    
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_lists_active_name
+    ON custom_lists(LOWER(TRIM(name)))
     WHERE deletedAt IS NULL;`
+    
 }
